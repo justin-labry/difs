@@ -51,12 +51,12 @@ FsStorage::~FsStorage() {}
 int64_t
 FsStorage::insert(const Data& data)
 {
+
+  int64_t id = hash(data.getName().toUri());
+
   Index::Entry entry(data, 0);
   string name = data.getName().toUri();
   std::replace(name.begin(), name.end(), '/', '_');
-
-  int64_t id = hash(data.getName().toUri());
-  std::cout << id << std::endl;
 
   auto dirName = m_path / std::to_string(id);
   boost::filesystem::create_directory(dirName);
@@ -73,8 +73,8 @@ FsStorage::insert(const Data& data)
 bool
 FsStorage::erase(const int64_t id)
 {
-  // TODO: Implement this
-  return false;
+  boost::filesystem::remove_all(m_path / std::to_string(id));
+  return true;
 }
 
 std::shared_ptr<Data>
