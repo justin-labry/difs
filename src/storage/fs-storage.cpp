@@ -1,4 +1,6 @@
 #include <istream>
+#include <iostream>
+#include <fstream>
 #include <iterator>
 #include <algorithm>
 
@@ -13,6 +15,16 @@
 
 namespace repo {
 using std::string;
+
+int64_t
+hash(std::string const& key)
+{
+  int64_t result = 12345;
+  for (auto current = key.begin(); current != key.end(); current += 1) {
+    result = 127 * result + static_cast<unsigned char>(*current);
+  }
+  return result;
+}
 
 FsStorage::FsStorage(const string& dbPath)
 {
@@ -39,8 +51,23 @@ FsStorage::~FsStorage() {}
 int64_t
 FsStorage::insert(const Data& data)
 {
-  // TODO: Implement this
-  return 0;
+  Index::Entry entry(data, 0);
+  string name = data.getName().toUri();
+  std::replace(name.begin(), name.end(), '/', '_');
+
+  int64_t id = hash(data.getName().toUri());
+  std::cout << id << std::endl;
+
+  auto dirName = m_path / std::to_string(id);
+  boost::filesystem::create_directory(dirName);
+
+  boost::filesystem::ofstream outFileName(dirName / "name");
+  outFileName << data.getName();
+
+  boost::filesystem::ofstream outFileData(dirName / "data");
+  outFileData << data.wireEncode().wire();
+
+  return id;
 }
 
 bool
