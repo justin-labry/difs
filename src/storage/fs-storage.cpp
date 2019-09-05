@@ -61,11 +61,15 @@ FsStorage::insert(const Data& data)
   auto dirName = m_path / std::to_string(id);
   boost::filesystem::create_directory(dirName);
 
-  boost::filesystem::ofstream outFileName(dirName / "name");
-  outFileName << data.getName();
+  std::ofstream outFileName((dirName / "name").string(), std::ios::binary);
+  outFileName.write(
+      reinterpret_cast<const char*>(entry.getName().wireEncode().wire()),
+      entry.getName().wireEncode().size());
 
-  boost::filesystem::ofstream outFileData(dirName / "data");
-  outFileData << data.wireEncode().wire();
+  std::ofstream outFileData((dirName / "data").string(), std::ios::binary);
+  outFileData.write(
+      reinterpret_cast<const char*>(data.wireEncode().wire()),
+      data.wireEncode().size());
 
   return id;
 }
