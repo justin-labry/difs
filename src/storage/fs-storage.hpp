@@ -63,6 +63,7 @@ public:
 
 private:
   std::string m_dbPath;
+  boost::filesystem::path m_path;
 };
 
 }  // namespace repo

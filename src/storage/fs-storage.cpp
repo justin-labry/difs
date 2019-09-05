@@ -1,10 +1,15 @@
+#include <istream>
+#include <iterator>
+#include <algorithm>
+
 #include "fs-storage.hpp"
 #include "config.hpp"
 #include "index.hpp"
 
+
 #include <ndn-cxx/util/sha256.hpp>
 #include <boost/filesystem.hpp>
-#include <istream>
+#include <boost/range/iterator_range.hpp>
 
 namespace repo {
 using std::string;
@@ -26,6 +31,7 @@ FsStorage::FsStorage(const string& dbPath)
 
     m_dbPath = dbPath;
   }
+  m_path = boost::filesystem::path(m_dbPath);
 }
 
 FsStorage::~FsStorage() {}
@@ -54,8 +60,13 @@ FsStorage::read(const int64_t id)
 int64_t
 FsStorage::size()
 {
-  // TODO: Implement this
-  return 0;
+  int64_t size = 0;
+
+  for (auto& entry : boost::make_iterator_range(boost::filesystem::directory_iterator(m_path), {})) {
+    size += 1;
+  }
+
+  return size;
 }
 
 void
