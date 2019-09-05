@@ -64,6 +64,10 @@ public:
 private:
   std::string m_dbPath;
   boost::filesystem::path m_path;
+
+  static const char* FNAME_NAME;
+  static const char* FNAME_DATA;
+  static const char* FNAME_HASH;
 };
 
 }  // namespace repo

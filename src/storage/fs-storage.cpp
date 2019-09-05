@@ -16,6 +16,10 @@
 namespace repo {
 using std::string;
 
+const char* FsStorage::FNAME_NAME = "name";
+const char* FsStorage::FNAME_DATA = "data";
+const char* FsStorage::FNAME_HASH = "locatorHash";
+
 int64_t
 hash(std::string const& key)
 {
@@ -61,15 +65,20 @@ FsStorage::insert(const Data& data)
   auto dirName = m_path / std::to_string(id);
   boost::filesystem::create_directory(dirName);
 
-  std::ofstream outFileName((dirName / "name").string(), std::ios::binary);
+  std::ofstream outFileName((dirName / FNAME_NAME).string(), std::ios::binary);
   outFileName.write(
       reinterpret_cast<const char*>(entry.getName().wireEncode().wire()),
       entry.getName().wireEncode().size());
 
-  std::ofstream outFileData((dirName / "data").string(), std::ios::binary);
+  std::ofstream outFileData((dirName / FNAME_DATA).string(), std::ios::binary);
   outFileData.write(
       reinterpret_cast<const char*>(data.wireEncode().wire()),
       data.wireEncode().size());
+
+  std::ofstream outFileLocator((dirName / FNAME_HASH).string(), std::ios::binary);
+  outFileLocator.write(
+      reinterpret_cast<const char*>(entry.getKeyLocatorHash()->data()),
+      entry.getKeyLocatorHash()->size());
 
   return id;
 }
@@ -87,7 +96,7 @@ FsStorage::read(const int64_t id)
   auto dirName = m_path / std::to_string(id);
   auto data = make_shared<Data>();
 
-  boost::filesystem::ifstream inFileData(dirName / "data", std::ifstream::binary);
+  boost::filesystem::ifstream inFileData(dirName / FNAME_DATA, std::ifstream::binary);
   inFileData.seekg(0, inFileData.end);
   int length = inFileData.tellg();
   inFileData.seekg(0, inFileData.beg);
@@ -115,7 +124,42 @@ FsStorage::size()
 void
 FsStorage::FsStorage::fullEnumerate(const std::function<void(const Storage::ItemMeta)>& f)
 {
-  // TODO: Implement this
+  for (auto& entry : boost::make_iterator_range(boost::filesystem::directory_iterator(m_path), {})) {
+
+    boost::filesystem::path p = entry.path();
+
+    ItemMeta item;
+    std::cout << p.filename().string() << std::endl;
+    item.id = std::stoll(p.filename().string());
+
+    boost::filesystem::ifstream isName(p / FNAME_NAME, std::ifstream::binary);
+    isName.seekg(0, isName.end);
+    int lengthName = isName.tellg();
+    isName.seekg(0, isName.beg);
+
+    char * bufferName = new char [lengthName];
+    isName.read(bufferName, lengthName);
+    item.fullName.wireDecode(Block(
+          reinterpret_cast<const uint8_t*>(bufferName),
+          lengthName));
+
+    boost::filesystem::ifstream isLocatorHash(p / FNAME_HASH, std::ifstream::binary);
+    isLocatorHash.seekg(0, isLocatorHash.end);
+    int lengthLocatorHash = isLocatorHash.tellg();
+    isLocatorHash.seekg(0, isLocatorHash.beg);
+
+    char * bufferLocator = new char [lengthLocatorHash];
+    isLocatorHash.read(bufferLocator, lengthLocatorHash);
+    item.keyLocatorHash = make_shared<const ndn::Buffer>(
+        bufferLocator,
+        lengthLocatorHash);
+
+    try {
+      f(item);
+    } catch (...) {
+    }
+
+  }
 }
 
 }  // namespace repo
