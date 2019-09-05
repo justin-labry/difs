@@ -84,8 +84,20 @@ FsStorage::erase(const int64_t id)
 std::shared_ptr<Data>
 FsStorage::read(const int64_t id)
 {
-  // TODO: Implement this
-  return nullptr;
+  auto dirName = m_path / std::to_string(id);
+  auto data = make_shared<Data>();
+
+  boost::filesystem::ifstream inFileData(dirName / "data", std::ifstream::binary);
+  inFileData.seekg(0, inFileData.end);
+  int length = inFileData.tellg();
+  inFileData.seekg(0, inFileData.beg);
+
+  char * buffer = new char [length];
+  inFileData.read(buffer, length);
+
+  data->wireDecode(Block(reinterpret_cast<const uint8_t*>(buffer), length));
+
+  return data;
 }
 
 int64_t
