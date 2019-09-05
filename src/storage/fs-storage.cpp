@@ -129,7 +129,6 @@ FsStorage::FsStorage::fullEnumerate(const std::function<void(const Storage::Item
     boost::filesystem::path p = entry.path();
 
     ItemMeta item;
-    std::cout << p.filename().string() << std::endl;
     item.id = std::stoll(p.filename().string());
 
     boost::filesystem::ifstream isName(p / FNAME_NAME, std::ifstream::binary);
