@@ -11,11 +11,13 @@ namespace repo {
 class NdnDelFile : boost::noncopyable
 {
 public:
-  NdnDelFile(const std::string& dataName,
+  NdnDelFile(const std::string& repoPrefix,
+    const std::string& dataName,
     bool verbose, bool versioned, bool single,
     int interestLifetime, int timeout,
     bool mustBeFresh = false)
-  : m_dataName(dataName)
+  : m_repoPrefix(repoPrefix)
+    , m_dataName(dataName)
     , m_verbose(verbose)
     , m_hasVersion(versioned)
     , m_isSingle(single)
@@ -65,6 +67,7 @@ private:
 private:
 
   ndn::Face m_face;
+  ndn::Name m_repoPrefix;
   ndn::Name m_dataName;
   bool m_verbose;
   bool m_hasVersion;

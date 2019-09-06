@@ -148,7 +148,7 @@ NdnDelFile::deleteData(const Data& data)
   }
 
   // TODO: send delete command interest
-  ndn::Interest commandInterest = generateCommandInterest(Name("/example/repo/1"), "delete", parameters);
+  ndn::Interest commandInterest = generateCommandInterest(m_repoPrefix, "delete", parameters);
   m_face.expressInterest(commandInterest,
     bind(&NdnDelFile::onDeleteCommandResponse, this, _1, _2),
     bind(&NdnDelFile::onDeleteCommandTimeout, this, _1),  // Nack
@@ -214,6 +214,7 @@ usage(const std::string& filename)
             << "    if -u is not specified, this command will return the rightmost child for the prefix\n"
             << "-l: InterestLifetime in milliseconds\n"
             << "-w: timeout in milliseconds for whole process (default unlimited)\n"
+            << "repo-prefix: repo command prefix\n"
             << "ndn-name: NDN Name prefix for Data to be read\n";
   return 1;
 }
@@ -222,6 +223,7 @@ usage(const std::string& filename)
 int
 main(int argc, char** argv)
 {
+  std::string repoPrefix;
   std::string name;
   bool verbose = false, versioned = false, single = false;
   int interestLifetime = 4000;  // in milliseconds
@@ -269,17 +271,19 @@ main(int argc, char** argv)
     }
   }
 
-  if (optind < argc)
-  {
-    name = argv[optind];
+  if (optind + 2 != argc) {
+    return usage(argv[0]);
   }
 
-  if (name.empty())
+  repoPrefix = argv[optind];
+  name = argv[optind+1];
+
+  if (name.empty() || repoPrefix.empty())
   {
     return usage(argv[0]);
   }
 
-  NdnDelFile ndnDelFile(name, verbose, versioned, single,
+  NdnDelFile ndnDelFile(repoPrefix, name, verbose, versioned, single,
     interestLifetime, timeout);
 
   try
