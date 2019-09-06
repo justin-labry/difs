@@ -87,7 +87,16 @@ FsStorage::insert(const Data& data)
 bool
 FsStorage::erase(const int64_t id)
 {
-  boost::filesystem::remove_all(m_path / std::to_string(id));
+  uint64_t id_unsigned = boost::lexical_cast<uint64_t>(id);
+  boost::filesystem::path fsPath(m_path / std::to_string(id_unsigned));
+
+  boost::filesystem::file_status fsPathStatus = boost::filesystem::status(fsPath);
+  if (!boost::filesystem::is_directory(fsPathStatus)) {
+    std::cerr << id_unsigned << " is not exists" << std::endl;
+    return false;
+  }
+
+  boost::filesystem::remove_all(fsPath);
   return true;
 }
 
