@@ -94,7 +94,8 @@ FsStorage::erase(const int64_t id)
 std::shared_ptr<Data>
 FsStorage::read(const int64_t id)
 {
-  auto dirName = m_path / std::to_string(id);
+  uint64_t id_unsigned = boost::lexical_cast<uint64_t>(id);
+  auto dirName = m_path / std::to_string(id_unsigned);
   auto data = make_shared<Data>();
 
   boost::filesystem::ifstream inFileData(dirName / FNAME_DATA, std::ifstream::binary);
@@ -130,7 +131,7 @@ FsStorage::FsStorage::fullEnumerate(const std::function<void(const Storage::Item
     boost::filesystem::path p = entry.path();
 
     ItemMeta item;
-    item.id = std::stoll(p.filename().string());
+    item.id = boost::lexical_cast<uint64_t>(std::stoull(p.filename().string()));
 
     boost::filesystem::ifstream isName(p / FNAME_NAME, std::ifstream::binary);
     isName.seekg(0, isName.end);
