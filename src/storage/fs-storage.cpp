@@ -10,6 +10,7 @@
 
 
 #include <ndn-cxx/util/sha256.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/range/iterator_range.hpp>
 
@@ -20,10 +21,10 @@ const char* FsStorage::FNAME_NAME = "name";
 const char* FsStorage::FNAME_DATA = "data";
 const char* FsStorage::FNAME_HASH = "locatorHash";
 
-int64_t
+uint64_t
 hash(std::string const& key)
 {
-  int64_t result = 12345;
+  uint64_t result = 12345;
   for (auto current = key.begin(); current != key.end(); current += 1) {
     result = 127 * result + static_cast<unsigned char>(*current);
   }
@@ -56,13 +57,13 @@ int64_t
 FsStorage::insert(const Data& data)
 {
 
-  int64_t id = hash(data.getName().toUri());
+  uint64_t id = hash(data.getName().toUri());
 
   Index::Entry entry(data, 0);
   string name = data.getName().toUri();
   std::replace(name.begin(), name.end(), '/', '_');
 
-  auto dirName = m_path / std::to_string(id);
+  auto dirName = m_path / boost::lexical_cast<std::string>(id);
   boost::filesystem::create_directory(dirName);
 
   std::ofstream outFileName((dirName / FNAME_NAME).string(), std::ios::binary);
@@ -80,7 +81,7 @@ FsStorage::insert(const Data& data)
       reinterpret_cast<const char*>(entry.getKeyLocatorHash()->data()),
       entry.getKeyLocatorHash()->size());
 
-  return id;
+  return (int64_t)id;
 }
 
 bool
