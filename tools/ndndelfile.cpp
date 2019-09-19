@@ -200,14 +200,14 @@ NdnDelFile::onDeleteCommandResponse(const ndn::Interest& interest, const ndn::Da
 void
 NdnDelFile::onDeleteCommandTimeout(const ndn::Interest& interest)
 {
-  /* std::cerr << "ERROR: timeout while deleting " << interest.getName() << std::endl; */
+  std::cerr << "ERROR: timeout while deleting " << interest.getName() << std::endl;
 }
 
 int
 usage(const std::string& filename)
 {
   std::cerr << "Usage: \n    "
-            << filename << " [-v] [-s] [-u] [-l lifetime] [-w timeout] ndn-name\n\n"
+            << filename << " [-v] [-s] [-u] [-l lifetime] [-w timeout] repo-name ndn-name\n\n"
             << "-v: be verbose\n"
             << "-s: only get single data packet\n"
             << "-u: versioned: ndn-name contains version component\n"
