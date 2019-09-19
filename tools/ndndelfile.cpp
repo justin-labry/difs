@@ -78,6 +78,7 @@ NdnDelFile::onVersionedData(const Interest& interest, const Data& data)
       Name delName = name;
       delName.appendSegment(0);
       fetchData(delName);
+      return;
     }
   } else if (name.size() == m_dataName.size() + 1) {
     if (m_isSingle) {
@@ -108,6 +109,7 @@ NdnDelFile::onUnversionedData(const Interest& interest, const Data& data)
       Name fetchName = name;
       fetchName.append(name[-1]).appendSegment(0);
       fetchData(fetchName);
+      return;
     }
   } else if (name.size() == m_dataName.size() + 2) {  // segmented
     if (m_isSingle) {
