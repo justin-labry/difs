@@ -22,7 +22,7 @@
 namespace repo {
 
 static const int RETRY_TIMEOUT = 3;
-static const int DEFAULT_CREDIT = 12;
+static const int DEFAULT_CREDIT = 1;
 static const milliseconds NOEND_TIMEOUT(10000);
 static const milliseconds PROCESS_DELETE_TIME(10000);
 static const milliseconds DEFAULT_INTEREST_LIFETIME(4000);
@@ -138,9 +138,10 @@ WriteHandle::onSegmentDataValidated(const Interest& interest, const Data& data, 
   }
   RepoCommandResponse& response = m_processes[processId].response;
 
-  //refresh endBlockId
   Name::Component finalBlockId = data.getFinalBlockId();
+  Name::Component currentBlockId = data.getName()[-1];
 
+  //refresh endBlockId
   if (!finalBlockId.empty()) {
     SegmentNo final = finalBlockId.toSegment();
     if (response.hasEndBlockId()) {
@@ -159,6 +160,11 @@ WriteHandle::onSegmentDataValidated(const Interest& interest, const Data& data, 
   }
 
   onSegmentDataControl(processId, interest);
+
+  if (currentBlockId == finalBlockId) {
+    // TODO: Write manifest
+    std::cout << "This is final block" << std::endl;
+  }
 }
 
 void
