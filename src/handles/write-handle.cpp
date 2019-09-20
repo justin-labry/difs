@@ -151,10 +151,12 @@ WriteHandle::onSegmentDataValidated(const Interest& interest, const Data& data, 
     if (response.hasEndBlockId()) {
       if (final < response.getEndBlockId()) {
         response.setEndBlockId(final);
+        process.endBlockId = final;
       }
     }
     else {
       response.setEndBlockId(final);
+      process.endBlockId = final;
     }
   }
 
@@ -537,6 +539,8 @@ WriteHandle::processSegmentedInsertCommand(const Interest& interest,
     response.setInsertNum(0);
     response.setStartBlockId(startBlockId);
     response.setEndBlockId(endBlockId);
+
+    process.endBlockId = endBlockId;
 
     reply(interest, response);
 
