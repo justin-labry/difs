@@ -216,6 +216,12 @@ private: // Create manifest command
   void
   onCreateValidationFailed(const Interest& interest, const ValidationError& error);
 
+  void
+  processSingleCreateCommand(const Interest& interest, RepoCommandParameter& parameter);
+
+  void
+  processSegmentedCreateCommand(const Interest& interest, RepoCommandParameter& parameter);
+
 private:
   void
   deleteProcess(ProcessId processId);
@@ -233,8 +239,11 @@ private: // Write manifest after final block
   void
   writeManifest(ProcessId processId, const Interest& interest);
 
-  std::string
-  getSha1Sum(const void* data, size_t size);
+  void
+  onCreateCommandResponse(const Interest& interest, const Data& data, ProcessId processId);
+
+  void
+  onCreateCommandTimeout(const Interest& interest, ProcessId processId);
 
 private:
   Validator& m_validator;

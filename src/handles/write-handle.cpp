@@ -20,6 +20,7 @@
 #include "write-handle.hpp"
 
 #include "manifest/manifest.hpp"
+#include "util.hpp"
 
 namespace repo {
 
@@ -181,13 +182,28 @@ WriteHandle::writeManifest(ProcessId processId, const Interest& interest)
 
   std::cout << "Manifest: " << manifest.toJson();
 
-  /* // FIXME: Write manifest instead of printing */
-  /* std::cout << "Writing manifest..." << std::endl */
-  /*   << "repo: " << repo << std::endl */
-  /*   << "Name: " << name << std::endl */
-  /*   << "Length: " << name.length() << std::endl */
-  /*   << "Segments: " << startBlockId << "-" << endBlockId << std::endl */
-  /*   << "Hash: " << nameHash << std::endl; */
+  RepoCommandParameter parameters;
+  Interest createInterest = util::generateCommandInterest(
+      repo, "create", parameters, m_interestLifetime);
+
+  getFace().expressInterest(
+      createInterest,
+      bind(&WriteHandle::onCreateCommandResponse, this, _1, _2, processId),
+      bind(&WriteHandle::onCreateCommandTimeout, this, _1, processId), // Nack
+      bind(&WriteHandle::onCreateCommandTimeout, this, _1, processId));
+}
+
+void
+WriteHandle::onCreateCommandResponse(
+    const Interest& interest, const Data& data, ProcessId processId)
+{
+  std::cout << "Create command response" << data.getName() << std::endl;
+}
+
+void
+WriteHandle::onCreateCommandTimeout(const Interest& interest, ProcessId processId)
+{
+  std::cerr << "Create timeout " << std::endl;
 }
 
 void
@@ -214,6 +230,8 @@ WriteHandle::listen(const Name& prefix)
   getFace().setInterestFilter(
     Name(prefix).append("insert check"),
     bind(&WriteHandle::onCheckInterest, this, _1, _2));
+
+  // FIXME: move to different handle module
   getFace().setInterestFilter(
     Name(prefix).append("create"),
     bind(&WriteHandle::onCreateInterest, this, _1, _2));
@@ -563,6 +581,48 @@ WriteHandle::processSegmentedInsertCommand(const Interest& interest,
 }
 
 void
+WriteHandle::onCreateInterest(const Name& prefix, const Interest& interest)
+{
+  std::cout << "Got create Interest: " << prefix << std::endl;
+  m_validator.validate(
+      interest,
+      bind(&WriteHandle::onCreateValidated, this, _1, prefix),
+      bind(&WriteHandle::onCreateValidationFailed, this, _1, _2));
+}
+
+void
+WriteHandle::onCreateValidated(const Interest& interest, const Name& prefix)
+{
+  RepoCommandParameter parameter;
+  try {
+    extractParameter(interest, prefix, parameter);
+  }
+  catch (RepoCommandParameter::Error) {
+    negativeReply(interest, 403);
+  }
+
+  if (parameter.hasStartBlockId() || parameter.hasEndBlockId()) {
+    if (parameter.hasSelectors()) {
+      negativeReply(interest, 402);
+      return;
+    }
+    processSegmentedCreateCommand(interest, parameter);
+  }
+  else {
+    std::cerr << "Do single create" << std::endl;
+    processSingleCreateCommand(interest, parameter);
+  }
+  if (parameter.hasInterestLifetime())
+    m_interestLifetime = parameter.getInterestLifetime();
+}
+
+void
+WriteHandle::onCreateValidationFailed(const Interest& interest, const ValidationError& error)
+{
+  std::cerr << error << std::endl;
+}
+
+void
 WriteHandle::extendNoEndTime(ProcessInfo& process)
 {
   ndn::time::steady_clock::TimePoint& noEndTime = process.noEndTime;
@@ -579,6 +639,39 @@ WriteHandle::extendNoEndTime(ProcessInfo& process)
 }
 
 void
+WriteHandle::processSingleCreateCommand(
+    const Interest& interest, RepoCommandParameter& parameter)
+{
+
+  auto name = parameter.getName();
+  std::cout << "Create single: " << name << std::endl;
+
+  ProcessId processId = generateProcessId();
+  ProcessInfo& process = m_processes[processId];
+
+  RepoCommandResponse& response = process.response;
+
+  response.setStatusCode(100);
+  response.setProcessId(processId);
+  response.setInsertNum(0);
+
+  reply(interest, response);
+
+  response.setStatusCode(300);
+
+  Interest infoInterest(parameter.getName());
+  infoInterest.setInterestLifetime(m_interestLifetime);
+}
+
+void
+WriteHandle::processSegmentedCreateCommand(
+    const Interest& interest, RepoCommandParameter& parameter)
+{
+  auto name = parameter.getName();
+  std::cout << "Create segmented: " << name << std::endl;
+}
+
+void
 WriteHandle::negativeReply(const Interest& interest, int statusCode)
 {
   RepoCommandResponse response;
@@ -586,22 +679,5 @@ WriteHandle::negativeReply(const Interest& interest, int statusCode)
   reply(interest, response);
 }
 
-void
-WriteHandle::onCreateInterest(const Name& prefix, const Interest& interest)
-{
-
-}
-
-void
-WriteHandle::onCreateValidated(const Interest& interest, const Name& prefix)
-{
-
-}
-
-void
-WriteHandle::onCreateValidationFailed(const Interest& interest, const ValidationError& error)
-{
-
-}
-
+// vim: cino=g0,N-s,+0 sw=2
 } // namespace repo
