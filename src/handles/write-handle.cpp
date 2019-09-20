@@ -239,10 +239,15 @@ WriteHandle::onSegmentTimeout(const Interest& interest, ProcessId processId)
 void
 WriteHandle::listen(const Name& prefix)
 {
-  getFace().setInterestFilter(Name(prefix).append("insert"),
-                              bind(&WriteHandle::onInterest, this, _1, _2));
-  getFace().setInterestFilter(Name(prefix).append("insert check"),
-                              bind(&WriteHandle::onCheckInterest, this, _1, _2));
+  getFace().setInterestFilter(
+    Name(prefix).append("insert"),
+    bind(&WriteHandle::onInterest, this, _1, _2));
+  getFace().setInterestFilter(
+    Name(prefix).append("insert check"),
+    bind(&WriteHandle::onCheckInterest, this, _1, _2));
+  getFace().setInterestFilter(
+    Name(prefix).append("create"),
+    bind(&WriteHandle::onCreateInterest, this, _1, _2));
 }
 
 void
@@ -610,6 +615,24 @@ WriteHandle::negativeReply(const Interest& interest, int statusCode)
   RepoCommandResponse response;
   response.setStatusCode(statusCode);
   reply(interest, response);
+}
+
+void
+WriteHandle::onCreateInterest(const Name& prefix, const Interest& interest)
+{
+
+}
+
+void
+WriteHandle::onCreateValidated(const Interest& interest, const Name& prefix)
+{
+
+}
+
+void
+WriteHandle::onCreateValidationFailed(const Interest& interest, const ValidationError& error)
+{
+
 }
 
 } // namespace repo

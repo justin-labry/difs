@@ -203,6 +203,19 @@ private: // insert state check command
   void
   onCheckValidationFailed(const Interest& interest, const ValidationError& error);
 
+private: // Create manifest command
+  /**
+   * @brief handle create(manifest create) command
+   */
+  void
+  onCreateInterest(const Name& prefix, const Interest& interest);
+
+  void
+  onCreateValidated(const Interest& interest, const Name& prefix);
+
+  void
+  onCreateValidationFailed(const Interest& interest, const ValidationError& error);
+
 private:
   void
   deleteProcess(ProcessId processId);
