@@ -89,6 +89,7 @@ private:
     int credit;  ///< congestion control credits of process
 
     // To write manifest, save these info
+    Name repo;
     Name name;
     int startBlockId;
     int endBlockId;

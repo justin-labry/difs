@@ -21,6 +21,8 @@
 
 #include <boost/format.hpp>
 #include <boost/uuid/sha1.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
 
 namespace repo {
 
@@ -166,10 +168,6 @@ WriteHandle::onSegmentDataValidated(const Interest& interest, const Data& data, 
   }
 
   onSegmentDataControl(processId, interest);
-
-  if (currentBlockId == finalBlockId) {
-    writeManifest(processId, interest);
-  }
 }
 
 void
@@ -177,15 +175,34 @@ WriteHandle::writeManifest(ProcessId processId, const Interest& interest)
 {
   ProcessInfo process = m_processes[processId];
 
+  std::string repo = process.repo.toUri();
   std::string name = process.name.toUri();
   int startBlockId = process.startBlockId;
   int endBlockId = process.endBlockId;
   std::string nameHash = getSha1Sum(name.c_str(), name.length());
 
   // FIXME: Write manifest instead of printing
-  std::cout << "Writing manifest..." << name << " " << name.length()
-    << " - " << startBlockId << "-" << endBlockId
-    << " hash: " << nameHash << std::endl;
+  std::cout << "Writing manifest..." << std::endl
+    << "repo: " << repo << std::endl
+    << "Name: " << name << std::endl
+    << "Length: " << name.length() << std::endl
+    << "Segments: " << startBlockId << "-" << endBlockId << std::endl
+    << "Hash: " << nameHash << std::endl;
+
+  namespace pt = boost::property_tree;
+
+  pt::ptree root;
+  root.put("name", name);
+  root.put("hash", nameHash);
+  root.put("repo", repo);
+
+  root.put("segments.start", startBlockId);
+  root.put("segments.end", endBlockId);
+
+
+  // TODO: write to file
+  // TODO: send interest instead of write
+  pt::write_json(std::cout, root);
 }
 
 std::string
@@ -451,6 +468,8 @@ WriteHandle::onCheckValidated(const Interest& interest, const Name& prefix)
   }
 
   ProcessInfo& process = m_processes[processId];
+  auto repo = prefix.getSubName(0, prefix.size() - 1);
+  process.repo = repo;
 
   RepoCommandResponse& response = process.response;
 
@@ -460,6 +479,8 @@ WriteHandle::onCheckValidated(const Interest& interest, const Name& prefix)
     reply(interest, response);
     return;
   }
+
+  writeManifest(processId, interest);
 
   //read if noEndtimeout
   if (!response.hasEndBlockId()) {
