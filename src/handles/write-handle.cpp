@@ -19,10 +19,7 @@
 
 #include "write-handle.hpp"
 
-#include <boost/format.hpp>
-#include <boost/uuid/sha1.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
+#include "manifest/manifest.hpp"
 
 namespace repo {
 
@@ -179,46 +176,18 @@ WriteHandle::writeManifest(ProcessId processId, const Interest& interest)
   std::string name = process.name.toUri();
   int startBlockId = process.startBlockId;
   int endBlockId = process.endBlockId;
-  std::string nameHash = getSha1Sum(name.c_str(), name.length());
 
-  // FIXME: Write manifest instead of printing
-  std::cout << "Writing manifest..." << std::endl
-    << "repo: " << repo << std::endl
-    << "Name: " << name << std::endl
-    << "Length: " << name.length() << std::endl
-    << "Segments: " << startBlockId << "-" << endBlockId << std::endl
-    << "Hash: " << nameHash << std::endl;
+  Manifest manifest(repo, name, startBlockId, endBlockId);
 
-  namespace pt = boost::property_tree;
+  std::cout << "Manifest: " << manifest.toJson();
 
-  pt::ptree root;
-  root.put("name", name);
-  root.put("hash", nameHash);
-  root.put("repo", repo);
-
-  root.put("segments.start", startBlockId);
-  root.put("segments.end", endBlockId);
-
-
-  // TODO: write to file
-  // TODO: send interest instead of write
-  pt::write_json(std::cout, root);
-}
-
-std::string
-WriteHandle::getSha1Sum(const void* data, size_t size)
-{
-  std::string result;
-  boost::uuids::detail::sha1 sha1;
-  unsigned hashBlock[5] = {0};
-  sha1.process_bytes(data, size);
-  sha1.get_digest(hashBlock);
-
-  for (int i = 0; i < 5; i += 1) {
-    result += str(boost::format("%08x") % hashBlock[i]);
-  }
-
-  return result;
+  /* // FIXME: Write manifest instead of printing */
+  /* std::cout << "Writing manifest..." << std::endl */
+  /*   << "repo: " << repo << std::endl */
+  /*   << "Name: " << name << std::endl */
+  /*   << "Length: " << name.length() << std::endl */
+  /*   << "Segments: " << startBlockId << "-" << endBlockId << std::endl */
+  /*   << "Hash: " << nameHash << std::endl; */
 }
 
 void
