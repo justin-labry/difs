@@ -141,7 +141,10 @@ NdnDelFile::deleteData(const Data& data)
     parameters.setName(m_dataName);
   }
   if (!m_isSingle) {
-    Name prefix(m_dataName.append(data.getName()[-2]));
+    Name prefix(m_dataName);
+    if (!m_hasVersion) {
+      prefix.append(data.getName()[-2]);
+    }
     parameters.setName(prefix);
     const ndn::name::Component& finalBlockId = data.getMetaInfo().getFinalBlockId();
     if (!finalBlockId.empty()) {
