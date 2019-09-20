@@ -88,6 +88,11 @@ private:
     map<SegmentNo, int> retryCounts;  ///< to store retrying times of timeout segment
     int credit;  ///< congestion control credits of process
 
+    // To write manifest, save these info
+    Name name;
+    int startBlockId;
+    int endBlockId;
+
     /**
      * @brief the latest time point at which EndBlockId must be determined
      *
@@ -209,6 +214,13 @@ private:
 
   void
   negativeReply(const Interest& interest, int statusCode);
+
+private: // Write manifest after final block
+  void
+  writeManifest(ProcessId processId, const Interest& interest);
+
+  std::string
+  getSha1Sum(const void* data, size_t size);
 
 private:
   Validator& m_validator;

@@ -19,6 +19,9 @@
 
 #include "write-handle.hpp"
 
+#include <boost/format.hpp>
+#include <boost/uuid/sha1.hpp>
+
 namespace repo {
 
 static const int RETRY_TIMEOUT = 3;
@@ -136,7 +139,8 @@ WriteHandle::onSegmentDataValidated(const Interest& interest, const Data& data, 
   if (m_processes.count(processId) == 0) {
     return;
   }
-  RepoCommandResponse& response = m_processes[processId].response;
+  ProcessInfo& process = m_processes[processId];
+  RepoCommandResponse& response = process.response;
 
   Name::Component finalBlockId = data.getFinalBlockId();
   Name::Component currentBlockId = data.getName()[-1];
@@ -162,9 +166,40 @@ WriteHandle::onSegmentDataValidated(const Interest& interest, const Data& data, 
   onSegmentDataControl(processId, interest);
 
   if (currentBlockId == finalBlockId) {
-    // TODO: Write manifest
-    std::cout << "This is final block" << std::endl;
+    writeManifest(processId, interest);
   }
+}
+
+void
+WriteHandle::writeManifest(ProcessId processId, const Interest& interest)
+{
+  ProcessInfo process = m_processes[processId];
+
+  std::string name = process.name.toUri();
+  int startBlockId = process.startBlockId;
+  int endBlockId = process.endBlockId;
+  std::string nameHash = getSha1Sum(name.c_str(), name.length());
+
+  // FIXME: Write manifest instead of printing
+  std::cout << "Writing manifest..." << name << " " << name.length()
+    << " - " << startBlockId << "-" << endBlockId
+    << " hash: " << nameHash << std::endl;
+}
+
+std::string
+WriteHandle::getSha1Sum(const void* data, size_t size)
+{
+  std::string result;
+  boost::uuids::detail::sha1 sha1;
+  unsigned hashBlock[5] = {0};
+  sha1.process_bytes(data, size);
+  sha1.get_digest(hashBlock);
+
+  for (int i = 0; i < 5; i += 1) {
+    result += str(boost::format("%08x") % hashBlock[i]);
+  }
+
+  return result;
 }
 
 void
@@ -202,11 +237,15 @@ WriteHandle::segInit(ProcessId processId, const RepoCommandParameter& parameter)
   Name name = parameter.getName();
   SegmentNo startBlockId = parameter.getStartBlockId();
 
+  process.name = name;
+  process.startBlockId = parameter.getStartBlockId();
+
   uint64_t initialCredit = m_credit;
 
   if (parameter.hasEndBlockId()) {
     initialCredit =
       std::min(initialCredit, parameter.getEndBlockId() - parameter.getStartBlockId() + 1);
+    process.endBlockId = parameter.getEndBlockId();
   }
   else {
     // set noEndTimeout timer
