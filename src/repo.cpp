@@ -118,6 +118,7 @@ Repo::Repo(boost::asio::io_service& ioService, const RepoConfig& config)
   , m_writeHandle(m_face, m_storageHandle, m_keyChain, m_scheduler, m_validator)
   , m_watchHandle(m_face, m_storageHandle, m_keyChain, m_scheduler, m_validator)
   , m_deleteHandle(m_face, m_storageHandle, m_keyChain, m_scheduler, m_validator)
+  , m_manifestHandle(m_face, m_storageHandle, m_keyChain, m_scheduler, m_validator)
   , m_tcpBulkInsertHandle(ioService, m_storageHandle)
 
 {
@@ -152,6 +153,7 @@ Repo::enableListening()
     m_writeHandle.listen(cmdPrefix);
     m_watchHandle.listen(cmdPrefix);
     m_deleteHandle.listen(cmdPrefix);
+    m_manifestHandle.listen(cmdPrefix);
   }
 
   for (const auto& ep : m_config.tcpBulkInsertEndpoints) {

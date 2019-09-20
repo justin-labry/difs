@@ -17,10 +17,9 @@
  * repo-ng, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "write-handle.hpp"
+#include "manifest-handle.hpp"
 
 #include "manifest/manifest.hpp"
-#include "util.hpp"
 
 namespace repo {
 
@@ -30,7 +29,7 @@ static const milliseconds NOEND_TIMEOUT(10000);
 static const milliseconds PROCESS_DELETE_TIME(10000);
 static const milliseconds DEFAULT_INTEREST_LIFETIME(4000);
 
-WriteHandle::WriteHandle(Face& face, RepoStorage& storageHandle, KeyChain& keyChain,
+ManifestHandle::ManifestHandle(Face& face, RepoStorage& storageHandle, KeyChain& keyChain,
                          Scheduler& scheduler,
                          Validator& validator)
   : BaseHandle(face, storageHandle, keyChain, scheduler)
@@ -43,22 +42,22 @@ WriteHandle::WriteHandle(Face& face, RepoStorage& storageHandle, KeyChain& keyCh
 }
 
 void
-WriteHandle::deleteProcess(ProcessId processId)
+ManifestHandle::deleteProcess(ProcessId processId)
 {
   m_processes.erase(processId);
 }
 
 // Interest.
 void
-WriteHandle::onInterest(const Name& prefix, const Interest& interest)
+ManifestHandle::onCreateInterest(const Name& prefix, const Interest& interest)
 {
   m_validator.validate(interest,
-                       bind(&WriteHandle::onValidated, this, _1, prefix),
-                       bind(&WriteHandle::onValidationFailed, this, _1, _2));
+                       bind(&ManifestHandle::onValidated, this, _1, prefix),
+                       bind(&ManifestHandle::onValidationFailed, this, _1, _2));
 }
 
 void
-WriteHandle::onValidated(const Interest& interest, const Name& prefix)
+ManifestHandle::onValidated(const Interest& interest, const Name& prefix)
 {
   //m_validResult = 1;
   RepoCommandParameter parameter;
@@ -85,22 +84,22 @@ WriteHandle::onValidated(const Interest& interest, const Name& prefix)
 }
 
 void
-WriteHandle::onValidationFailed(const Interest& interest, const ValidationError& error)
+ManifestHandle::onValidationFailed(const Interest& interest, const ValidationError& error)
 {
   std::cerr << error << std::endl;
   negativeReply(interest, 401);
 }
 
 void
-WriteHandle::onData(const Interest& interest, const Data& data, ProcessId processId)
+ManifestHandle::onData(const Interest& interest, const Data& data, ProcessId processId)
 {
   m_validator.validate(data,
-                       bind(&WriteHandle::onDataValidated, this, interest, _1, processId),
-                       bind(&WriteHandle::onDataValidationFailed, this, _1, _2));
+                       bind(&ManifestHandle::onDataValidated, this, interest, _1, processId),
+                       bind(&ManifestHandle::onDataValidationFailed, this, _1, _2));
 }
 
 void
-WriteHandle::onDataValidated(const Interest& interest, const Data& data, ProcessId processId)
+ManifestHandle::onDataValidated(const Interest& interest, const Data& data, ProcessId processId)
 {
   if (m_processes.count(processId) == 0) {
     return;
@@ -120,21 +119,21 @@ WriteHandle::onDataValidated(const Interest& interest, const Data& data, Process
 }
 
 void
-WriteHandle::onDataValidationFailed(const Data& data, const ValidationError& error)
+ManifestHandle::onDataValidationFailed(const Data& data, const ValidationError& error)
 {
   std::cerr << error << std::endl;
 }
 
 void
-WriteHandle::onSegmentData(const Interest& interest, const Data& data, ProcessId processId)
+ManifestHandle::onSegmentData(const Interest& interest, const Data& data, ProcessId processId)
 {
   m_validator.validate(data,
-                       bind(&WriteHandle::onSegmentDataValidated, this, interest, _1, processId),
-                       bind(&WriteHandle::onDataValidationFailed, this, _1, _2));
+                       bind(&ManifestHandle::onSegmentDataValidated, this, interest, _1, processId),
+                       bind(&ManifestHandle::onDataValidationFailed, this, _1, _2));
 }
 
 void
-WriteHandle::onSegmentDataValidated(const Interest& interest, const Data& data, ProcessId processId)
+ManifestHandle::onSegmentDataValidated(const Interest& interest, const Data& data, ProcessId processId)
 {
   if (m_processes.count(processId) == 0) {
     return;
@@ -151,12 +150,10 @@ WriteHandle::onSegmentDataValidated(const Interest& interest, const Data& data, 
     if (response.hasEndBlockId()) {
       if (final < response.getEndBlockId()) {
         response.setEndBlockId(final);
-        process.endBlockId = final;
       }
     }
     else {
       response.setEndBlockId(final);
-      process.endBlockId = final;
     }
   }
 
@@ -169,53 +166,14 @@ WriteHandle::onSegmentDataValidated(const Interest& interest, const Data& data, 
 }
 
 void
-WriteHandle::writeManifest(ProcessId processId, const Interest& interest)
-{
-  ProcessInfo process = m_processes[processId];
-
-  std::string repo = process.repo.toUri();
-  std::string name = process.name.toUri();
-  int startBlockId = process.startBlockId;
-  int endBlockId = process.endBlockId;
-
-  Manifest manifest(repo, name, startBlockId, endBlockId);
-
-  std::cout << "Manifest: " << manifest.toJson();
-
-  RepoCommandParameter parameters;
-  parameters.setName(name);
-  Interest createInterest = util::generateCommandInterest(
-      repo, "create", parameters, m_interestLifetime);
-
-  getFace().expressInterest(
-      createInterest,
-      bind(&WriteHandle::onCreateCommandResponse, this, _1, _2, processId),
-      bind(&WriteHandle::onCreateCommandTimeout, this, _1, processId), // Nack
-      bind(&WriteHandle::onCreateCommandTimeout, this, _1, processId));
-}
-
-void
-WriteHandle::onCreateCommandResponse(
-    const Interest& interest, const Data& data, ProcessId processId)
-{
-  std::cout << "Create command response: " << data.getName() << std::endl;
-}
-
-void
-WriteHandle::onCreateCommandTimeout(const Interest& interest, ProcessId processId)
-{
-  std::cerr << "Create timeout " << std::endl;
-}
-
-void
-WriteHandle::onTimeout(const Interest& interest, ProcessId processId)
+ManifestHandle::onTimeout(const Interest& interest, ProcessId processId)
 {
   std::cerr << "Timeout" << std::endl;
   m_processes.erase(processId);
 }
 
 void
-WriteHandle::onSegmentTimeout(const Interest& interest, ProcessId processId)
+ManifestHandle::onSegmentTimeout(const Interest& interest, ProcessId processId)
 {
   std::cerr << "SegTimeout" << std::endl;
 
@@ -223,18 +181,23 @@ WriteHandle::onSegmentTimeout(const Interest& interest, ProcessId processId)
 }
 
 void
-WriteHandle::listen(const Name& prefix)
+ManifestHandle::listen(const Name& prefix)
 {
+  /* getFace().setInterestFilter( */
+  /*   Name(prefix).append("insert"), */
+  /*   bind(&ManifestHandle::onInterest, this, _1, _2)); */
+  /* getFace().setInterestFilter( */
+  /*   Name(prefix).append("insert check"), */
+  /*   bind(&ManifestHandle::onCheckInterest, this, _1, _2)); */
+
+  // FIXME: move to different handle module
   getFace().setInterestFilter(
-    Name(prefix).append("insert"),
-    bind(&WriteHandle::onInterest, this, _1, _2));
-  getFace().setInterestFilter(
-    Name(prefix).append("insert check"),
-    bind(&WriteHandle::onCheckInterest, this, _1, _2));
+    Name(prefix).append("create"),
+    bind(&ManifestHandle::onCreateInterest, this, _1, _2));
 }
 
 void
-WriteHandle::segInit(ProcessId processId, const RepoCommandParameter& parameter)
+ManifestHandle::segInit(ProcessId processId, const RepoCommandParameter& parameter)
 {
   ProcessInfo& process = m_processes[processId];
   process.credit = 0;
@@ -244,15 +207,11 @@ WriteHandle::segInit(ProcessId processId, const RepoCommandParameter& parameter)
   Name name = parameter.getName();
   SegmentNo startBlockId = parameter.getStartBlockId();
 
-  process.name = name;
-  process.startBlockId = parameter.getStartBlockId();
-
   uint64_t initialCredit = m_credit;
 
   if (parameter.hasEndBlockId()) {
     initialCredit =
       std::min(initialCredit, parameter.getEndBlockId() - parameter.getStartBlockId() + 1);
-    process.endBlockId = parameter.getEndBlockId();
   }
   else {
     // set noEndTimeout timer
@@ -268,9 +227,9 @@ WriteHandle::segInit(ProcessId processId, const RepoCommandParameter& parameter)
     Interest interest(fetchName);
     interest.setInterestLifetime(m_interestLifetime);
     getFace().expressInterest(interest,
-                              bind(&WriteHandle::onSegmentData, this, _1, _2, processId),
-                              bind(&WriteHandle::onSegmentTimeout, this, _1, processId), // Nack
-                              bind(&WriteHandle::onSegmentTimeout, this, _1, processId));
+                              bind(&ManifestHandle::onSegmentData, this, _1, _2, processId),
+                              bind(&ManifestHandle::onSegmentTimeout, this, _1, processId), // Nack
+                              bind(&ManifestHandle::onSegmentTimeout, this, _1, processId));
     process.credit--;
     processRetry[segment] = 0;
   }
@@ -282,7 +241,7 @@ WriteHandle::segInit(ProcessId processId, const RepoCommandParameter& parameter)
 }
 
 void
-WriteHandle::onSegmentDataControl(ProcessId processId, const Interest& interest)
+ManifestHandle::onSegmentDataControl(ProcessId processId, const Interest& interest)
 {
   if (m_processes.count(processId) == 0) {
     return;
@@ -363,9 +322,9 @@ WriteHandle::onSegmentDataControl(ProcessId processId, const Interest& interest)
   Interest fetchInterest(fetchName);
   fetchInterest.setInterestLifetime(m_interestLifetime);
   getFace().expressInterest(fetchInterest,
-                            bind(&WriteHandle::onSegmentData, this, _1, _2, processId),
-                            bind(&WriteHandle::onSegmentTimeout, this, _1, processId), // Nack
-                            bind(&WriteHandle::onSegmentTimeout, this, _1, processId));
+                            bind(&ManifestHandle::onSegmentData, this, _1, _2, processId),
+                            bind(&ManifestHandle::onSegmentTimeout, this, _1, processId), // Nack
+                            bind(&ManifestHandle::onSegmentTimeout, this, _1, processId));
   //When an interest is expressed, processCredit--
   processCredit--;
   if (retryCounts.count(sendingSegment) == 0) {
@@ -384,7 +343,7 @@ WriteHandle::onSegmentDataControl(ProcessId processId, const Interest& interest)
 }
 
 void
-WriteHandle::onSegmentTimeoutControl(ProcessId processId, const Interest& interest)
+ManifestHandle::onSegmentTimeoutControl(ProcessId processId, const Interest& interest)
 {
   if (m_processes.count(processId) == 0) {
     return;
@@ -415,24 +374,24 @@ WriteHandle::onSegmentTimeoutControl(ProcessId processId, const Interest& intere
     Interest retryInterest(interest.getName());
     retryInterest.setInterestLifetime(m_interestLifetime);
     getFace().expressInterest(retryInterest,
-                              bind(&WriteHandle::onSegmentData, this, _1, _2, processId),
-                              bind(&WriteHandle::onSegmentTimeout, this, _1, processId), // Nack
-                              bind(&WriteHandle::onSegmentTimeout, this, _1, processId));
+                              bind(&ManifestHandle::onSegmentData, this, _1, _2, processId),
+                              bind(&ManifestHandle::onSegmentTimeout, this, _1, processId), // Nack
+                              bind(&ManifestHandle::onSegmentTimeout, this, _1, processId));
   }
 
 }
 
 void
-WriteHandle::onCheckInterest(const Name& prefix, const Interest& interest)
+ManifestHandle::onCheckInterest(const Name& prefix, const Interest& interest)
 {
   m_validator.validate(interest,
-                       bind(&WriteHandle::onCheckValidated, this, _1, prefix),
-                       bind(&WriteHandle::onCheckValidationFailed, this, _1, _2));
+                       bind(&ManifestHandle::onCheckValidated, this, _1, prefix),
+                       bind(&ManifestHandle::onCheckValidationFailed, this, _1, _2));
 
 }
 
 void
-WriteHandle::onCheckValidated(const Interest& interest, const Name& prefix)
+ManifestHandle::onCheckValidated(const Interest& interest, const Name& prefix)
 {
   RepoCommandParameter parameter;
   try {
@@ -456,8 +415,6 @@ WriteHandle::onCheckValidated(const Interest& interest, const Name& prefix)
   }
 
   ProcessInfo& process = m_processes[processId];
-  auto repo = prefix.getSubName(0, prefix.size() - 1);
-  process.repo = repo;
 
   RepoCommandResponse& response = process.response;
 
@@ -467,8 +424,6 @@ WriteHandle::onCheckValidated(const Interest& interest, const Name& prefix)
     reply(interest, response);
     return;
   }
-
-  writeManifest(processId, interest);
 
   //read if noEndtimeout
   if (!response.hasEndBlockId()) {
@@ -482,26 +437,28 @@ WriteHandle::onCheckValidated(const Interest& interest, const Name& prefix)
 }
 
 void
-WriteHandle::onCheckValidationFailed(const Interest& interest, const ValidationError& error)
+ManifestHandle::onCheckValidationFailed(const Interest& interest, const ValidationError& error)
 {
   std::cerr << error << std::endl;
   negativeReply(interest, 401);
 }
 
 void
-WriteHandle::deferredDeleteProcess(ProcessId processId)
+ManifestHandle::deferredDeleteProcess(ProcessId processId)
 {
   getScheduler().scheduleEvent(PROCESS_DELETE_TIME,
-                               bind(&WriteHandle::deleteProcess, this, processId));
+                               bind(&ManifestHandle::deleteProcess, this, processId));
 }
 
 void
-WriteHandle::processSingleInsertCommand(const Interest& interest,
+ManifestHandle::processSingleInsertCommand(const Interest& interest,
                                         RepoCommandParameter& parameter)
 {
   ProcessId processId = generateProcessId();
 
   ProcessInfo& process = m_processes[processId];
+
+  std::cout << "Processing single create: " << parameter.getName() << std::endl;
 
   RepoCommandResponse& response = process.response;
   response.setStatusCode(100);
@@ -518,15 +475,16 @@ WriteHandle::processSingleInsertCommand(const Interest& interest,
     fetchInterest.setSelectors(parameter.getSelectors());
   }
   getFace().expressInterest(fetchInterest,
-                            bind(&WriteHandle::onData, this, _1, _2, processId),
-                            bind(&WriteHandle::onTimeout, this, _1, processId), // Nack
-                            bind(&WriteHandle::onTimeout, this, _1, processId));
+                            bind(&ManifestHandle::onData, this, _1, _2, processId),
+                            bind(&ManifestHandle::onTimeout, this, _1, processId), // Nack
+                            bind(&ManifestHandle::onTimeout, this, _1, processId));
 }
 
 void
-WriteHandle::processSegmentedInsertCommand(const Interest& interest,
+ManifestHandle::processSegmentedInsertCommand(const Interest& interest,
                                            RepoCommandParameter& parameter)
 {
+  std::cout << "Processing segmented create: " << std::endl;
   if (parameter.hasEndBlockId()) {
     //normal fetch segment
     if (!parameter.hasStartBlockId()) {
@@ -548,8 +506,6 @@ WriteHandle::processSegmentedInsertCommand(const Interest& interest,
     response.setInsertNum(0);
     response.setStartBlockId(startBlockId);
     response.setEndBlockId(endBlockId);
-
-    process.endBlockId = endBlockId;
 
     reply(interest, response);
 
@@ -577,49 +533,7 @@ WriteHandle::processSegmentedInsertCommand(const Interest& interest,
 }
 
 void
-WriteHandle::onCreateInterest(const Name& prefix, const Interest& interest)
-{
-  std::cout << "Got create Interest: " << prefix << std::endl;
-  m_validator.validate(
-      interest,
-      bind(&WriteHandle::onCreateValidated, this, _1, prefix),
-      bind(&WriteHandle::onCreateValidationFailed, this, _1, _2));
-}
-
-void
-WriteHandle::onCreateValidated(const Interest& interest, const Name& prefix)
-{
-  RepoCommandParameter parameter;
-  try {
-    extractParameter(interest, prefix, parameter);
-  }
-  catch (RepoCommandParameter::Error) {
-    negativeReply(interest, 403);
-  }
-
-  if (parameter.hasStartBlockId() || parameter.hasEndBlockId()) {
-    if (parameter.hasSelectors()) {
-      negativeReply(interest, 402);
-      return;
-    }
-    processSegmentedCreateCommand(interest, parameter);
-  }
-  else {
-    std::cerr << "Do single create" << std::endl;
-    processSingleCreateCommand(interest, parameter);
-  }
-  if (parameter.hasInterestLifetime())
-    m_interestLifetime = parameter.getInterestLifetime();
-}
-
-void
-WriteHandle::onCreateValidationFailed(const Interest& interest, const ValidationError& error)
-{
-  std::cerr << error << std::endl;
-}
-
-void
-WriteHandle::extendNoEndTime(ProcessInfo& process)
+ManifestHandle::extendNoEndTime(ProcessInfo& process)
 {
   ndn::time::steady_clock::TimePoint& noEndTime = process.noEndTime;
   ndn::time::steady_clock::TimePoint now = ndn::time::steady_clock::now();
@@ -635,40 +549,7 @@ WriteHandle::extendNoEndTime(ProcessInfo& process)
 }
 
 void
-WriteHandle::processSingleCreateCommand(
-    const Interest& interest, RepoCommandParameter& parameter)
-{
-
-  auto name = parameter.getName();
-  std::cout << "Create single: " << name << std::endl;
-
-  ProcessId processId = generateProcessId();
-  ProcessInfo& process = m_processes[processId];
-
-  RepoCommandResponse& response = process.response;
-
-  response.setStatusCode(100);
-  response.setProcessId(processId);
-  response.setInsertNum(0);
-
-  reply(interest, response);
-
-  response.setStatusCode(300);
-
-  Interest infoInterest(parameter.getName());
-  infoInterest.setInterestLifetime(m_interestLifetime);
-}
-
-void
-WriteHandle::processSegmentedCreateCommand(
-    const Interest& interest, RepoCommandParameter& parameter)
-{
-  auto name = parameter.getName();
-  std::cout << "Create segmented: " << name << std::endl;
-}
-
-void
-WriteHandle::negativeReply(const Interest& interest, int statusCode)
+ManifestHandle::negativeReply(const Interest& interest, int statusCode)
 {
   RepoCommandResponse response;
   response.setStatusCode(statusCode);
