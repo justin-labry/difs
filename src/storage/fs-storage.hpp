@@ -65,12 +65,18 @@ public:
   fullEnumerate(const std::function<void(const Storage::ItemMeta)>& f);
 
 private:
+  int64_t
+  writeData(const Data& data, const char* dataType);
+
+private:
   std::string m_dbPath;
   boost::filesystem::path m_path;
 
   static const char* FNAME_NAME;
   static const char* FNAME_DATA;
   static const char* FNAME_HASH;
+  static const char* DIRNAME_DATA;
+  static const char* DIRNAME_MANIFEST;
 };
 
 }  // namespace repo

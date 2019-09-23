@@ -20,6 +20,8 @@ using std::string;
 const char* FsStorage::FNAME_NAME = "name";
 const char* FsStorage::FNAME_DATA = "data";
 const char* FsStorage::FNAME_HASH = "locatorHash";
+const char* FsStorage::DIRNAME_DATA = "data";
+const char* FsStorage::DIRNAME_MANIFEST = "manifest";
 
 uint64_t
 hash(std::string const& key)
@@ -49,6 +51,8 @@ FsStorage::FsStorage(const string& dbPath)
     m_dbPath = dbPath;
   }
   m_path = boost::filesystem::path(m_dbPath);
+  boost::filesystem::create_directory(m_path / DIRNAME_DATA);
+  boost::filesystem::create_directory(m_path / DIRNAME_MANIFEST);
 }
 
 FsStorage::~FsStorage() {}
@@ -56,14 +60,25 @@ FsStorage::~FsStorage() {}
 int64_t
 FsStorage::insert(const Data& data)
 {
+  return writeData(data, DIRNAME_DATA);
+}
 
+int64_t
+FsStorage::insertManifest(const Data& data)
+{
+  return writeData(data, DIRNAME_MANIFEST);
+}
+
+int64_t
+FsStorage::writeData(const Data& data, const char* dataType)
+{
   uint64_t id = hash(data.getName().toUri());
 
   Index::Entry entry(data, 0);
   string name = data.getName().toUri();
   std::replace(name.begin(), name.end(), '/', '_');
 
-  auto dirName = m_path / boost::lexical_cast<std::string>(id);
+  auto dirName = m_path / dataType / boost::lexical_cast<std::string>(id);
   boost::filesystem::create_directory(dirName);
 
   std::ofstream outFileName((dirName / FNAME_NAME).string(), std::ios::binary);
@@ -84,19 +99,11 @@ FsStorage::insert(const Data& data)
   return (int64_t)id;
 }
 
-int64_t
-FsStorage::insertManifest(const Data& data)
-{
-  // TODO: implement this
-  std::cerr << "Not implemented!!: insertManifest";
-  return -1;
-}
-
 bool
 FsStorage::erase(const int64_t id)
 {
   uint64_t id_unsigned = boost::lexical_cast<uint64_t>(id);
-  boost::filesystem::path fsPath(m_path / std::to_string(id_unsigned));
+  boost::filesystem::path fsPath(m_path / DIRNAME_DATA / std::to_string(id_unsigned));
 
   boost::filesystem::file_status fsPathStatus = boost::filesystem::status(fsPath);
   if (!boost::filesystem::is_directory(fsPathStatus)) {
@@ -112,7 +119,7 @@ std::shared_ptr<Data>
 FsStorage::read(const int64_t id)
 {
   uint64_t id_unsigned = boost::lexical_cast<uint64_t>(id);
-  auto dirName = m_path / std::to_string(id_unsigned);
+  auto dirName = m_path / DIRNAME_DATA / std::to_string(id_unsigned);
   auto data = make_shared<Data>();
 
   boost::filesystem::ifstream inFileData(dirName / FNAME_DATA, std::ifstream::binary);
@@ -133,7 +140,7 @@ FsStorage::size()
 {
   int64_t size = 0;
 
-  for (auto& entry : boost::make_iterator_range(boost::filesystem::directory_iterator(m_path), {})) {
+  for (auto& entry : boost::make_iterator_range(boost::filesystem::directory_iterator(m_path / DIRNAME_DATA), {})) {
     size += 1;
   }
 
@@ -143,7 +150,7 @@ FsStorage::size()
 void
 FsStorage::FsStorage::fullEnumerate(const std::function<void(const Storage::ItemMeta)>& f)
 {
-  for (auto& entry : boost::make_iterator_range(boost::filesystem::directory_iterator(m_path), {})) {
+  for (auto& entry : boost::make_iterator_range(boost::filesystem::directory_iterator(m_path / DIRNAME_DATA), {})) {
 
     boost::filesystem::path p = entry.path();
 
