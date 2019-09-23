@@ -65,6 +65,12 @@ public:
   insertData(const Data& data);
 
   /**
+   * @brief  insert manifest into repo
+   */
+  bool
+  insertManifest(const Data& data);
+
+  /**
    *  @brief   delete data from repo
    *  @param   name     used to find entry needed to be erased in repo
    *  @return  if deletion in either index or database fail, return -1,
@@ -97,9 +103,12 @@ private:
 public:
   ndn::util::Signal<RepoStorage, ndn::Name> afterDataInsertion;
   ndn::util::Signal<RepoStorage, ndn::Name> afterDataDeletion;
+  ndn::util::Signal<RepoStorage, ndn::Name> afterManifestInsertion;
+  ndn::util::Signal<RepoStorage, ndn::Name> afterManifestDeletion;
 
 private:
   Index m_index;
+  Index m_manifestIndex;
   Storage& m_storage;
 };
 

@@ -84,6 +84,14 @@ FsStorage::insert(const Data& data)
   return (int64_t)id;
 }
 
+int64_t
+FsStorage::insertManifest(const Data& data)
+{
+  // TODO: implement this
+  std::cerr << "Not implemented!!: insertManifest";
+  return -1;
+}
+
 bool
 FsStorage::erase(const int64_t id)
 {

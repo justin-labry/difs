@@ -192,6 +192,13 @@ SqliteStorage::insert(const Data& data)
   return id;
 }
 
+int64_t
+SqliteStorage::insertManifest(const Data& data)
+{
+  // XXX: Not using sqlite
+  return -1;
+}
+
 
 bool
 SqliteStorage::erase(const int64_t id)

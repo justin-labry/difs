@@ -17,6 +17,8 @@
  * repo-ng, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <sstream>
+
 #include "write-handle.hpp"
 
 #include "manifest/manifest.hpp"
@@ -184,6 +186,7 @@ WriteHandle::writeManifest(ProcessId processId, const Interest& interest)
 
   RepoCommandParameter parameters;
   parameters.setName(name);
+  parameters.setProcessId(processId);
   Interest createInterest = util::generateCommandInterest(
       repo, "create", parameters, m_interestLifetime);
 
@@ -198,7 +201,7 @@ void
 WriteHandle::onCreateCommandResponse(
     const Interest& interest, const Data& data, ProcessId processId)
 {
-  std::cout << "Create command response: " << data.getName() << std::endl;
+  /* std::cout << "Create command response: " << data.getName() << std::endl; */
 }
 
 void
@@ -231,6 +234,9 @@ WriteHandle::listen(const Name& prefix)
   getFace().setInterestFilter(
     Name(prefix).append("insert check"),
     bind(&WriteHandle::onCheckInterest, this, _1, _2));
+  getFace().setInterestFilter(
+    Name(prefix).append("info"),
+    bind(&WriteHandle::onInfoInterest, this, _1, _2));
 }
 
 void
@@ -577,17 +583,16 @@ WriteHandle::processSegmentedInsertCommand(const Interest& interest,
 }
 
 void
-WriteHandle::onCreateInterest(const Name& prefix, const Interest& interest)
+WriteHandle::onInfoInterest(const Name& prefix, const Interest& interest)
 {
-  std::cout << "Got create Interest: " << prefix << std::endl;
   m_validator.validate(
       interest,
-      bind(&WriteHandle::onCreateValidated, this, _1, prefix),
-      bind(&WriteHandle::onCreateValidationFailed, this, _1, _2));
+      bind(&WriteHandle::onInfoValidated, this, _1, prefix),
+      bind(&WriteHandle::onInfoValidationFailed, this, _1, _2));
 }
 
 void
-WriteHandle::onCreateValidated(const Interest& interest, const Name& prefix)
+WriteHandle::onInfoValidated(const Interest& interest, const Name& prefix)
 {
   RepoCommandParameter parameter;
   try {
@@ -602,18 +607,18 @@ WriteHandle::onCreateValidated(const Interest& interest, const Name& prefix)
       negativeReply(interest, 402);
       return;
     }
-    processSegmentedCreateCommand(interest, parameter);
+    processSegmentedInfoCommand(interest, parameter);
   }
   else {
     std::cerr << "Do single create" << std::endl;
-    processSingleCreateCommand(interest, parameter);
+    processSingleInfoCommand(interest, parameter);
   }
   if (parameter.hasInterestLifetime())
     m_interestLifetime = parameter.getInterestLifetime();
 }
 
 void
-WriteHandle::onCreateValidationFailed(const Interest& interest, const ValidationError& error)
+WriteHandle::onInfoValidationFailed(const Interest& interest, const ValidationError& error)
 {
   std::cerr << error << std::endl;
 }
@@ -635,7 +640,7 @@ WriteHandle::extendNoEndTime(ProcessInfo& process)
 }
 
 void
-WriteHandle::processSingleCreateCommand(
+WriteHandle::processSingleInfoCommand(
     const Interest& interest, RepoCommandParameter& parameter)
 {
 
@@ -645,22 +650,24 @@ WriteHandle::processSingleCreateCommand(
   ProcessId processId = generateProcessId();
   ProcessInfo& process = m_processes[processId];
 
-  RepoCommandResponse& response = process.response;
+  Manifest manifest(
+      process.repo.toUri(),
+      process.name.toUri(),
+      process.startBlockId,
+      process.endBlockId);
 
-  response.setStatusCode(100);
-  response.setProcessId(processId);
-  response.setInsertNum(0);
+  auto json = manifest.toJson();
 
+  // FIXME: TLV-LENGTH of sub-element of type 32 exceeds TLV-VALUE boundary of parent block
+  RepoCommandResponse response(
+      Block(reinterpret_cast<const uint8_t*>(json.c_str()), json.size())
+      block
+      );
   reply(interest, response);
-
-  response.setStatusCode(300);
-
-  Interest infoInterest(parameter.getName());
-  infoInterest.setInterestLifetime(m_interestLifetime);
 }
 
 void
-WriteHandle::processSegmentedCreateCommand(
+WriteHandle::processSegmentedInfoCommand(
     const Interest& interest, RepoCommandParameter& parameter)
 {
   auto name = parameter.getName();

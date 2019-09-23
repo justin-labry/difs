@@ -30,6 +30,7 @@ NDN_LOG_INIT(repo.RepoStorage);
 
 RepoStorage::RepoStorage(const int64_t& nMaxPackets, Storage& store)
   : m_index(nMaxPackets)
+  , m_manifestIndex(nMaxPackets)
   , m_storage(store)
 {
 }
@@ -62,6 +63,21 @@ RepoStorage::insertData(const Data& data)
    if (didInsert)
      afterDataInsertion(data.getName());
    return didInsert;
+}
+
+bool
+RepoStorage::insertManifest(const Data& data)
+{
+  bool isExist = m_manifestIndex.hasData(data);
+  if (isExist)
+    BOOST_THROW_EXCEPTION(Error("The entry manifest has already in the skiplist. Cannot be inserted!"));
+  int64_t id = m_storage.insertManifest(data);
+  if (id = -1)
+    return false;
+  bool didInsert = m_manifestIndex.insert(data, id);
+  if (didInsert)
+    afterManifestInsertion(data.getName());
+  return didInsert;
 }
 
 ssize_t

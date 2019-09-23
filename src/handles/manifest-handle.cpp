@@ -20,6 +20,7 @@
 #include "manifest-handle.hpp"
 
 #include "manifest/manifest.hpp"
+#include "util.hpp"
 
 namespace repo {
 
@@ -69,6 +70,12 @@ ManifestHandle::onValidated(const Interest& interest, const Name& prefix)
     return;
   }
 
+  auto processId = parameter.getProcessId();
+  ProcessInfo& process = m_processes[processId];
+  auto repo = prefix.getSubName(0, prefix.size() - 1);
+  process.repo = repo;
+  process.name = parameter.getName();
+
   if (parameter.hasStartBlockId() || parameter.hasEndBlockId()) {
     if (parameter.hasSelectors()) {
       negativeReply(interest, 402);
@@ -109,7 +116,7 @@ ManifestHandle::onDataValidated(const Interest& interest, const Data& data, Proc
   RepoCommandResponse& response = process.response;
 
   if (response.getInsertNum() == 0) {
-    getStorageHandle().insertData(data);
+    getStorageHandle().insertManifest(data);
    // getStorageHandle().insertEntry(data);
    // getStoreIndex().insert(data);
     response.setInsertNum(1);
@@ -183,14 +190,6 @@ ManifestHandle::onSegmentTimeout(const Interest& interest, ProcessId processId)
 void
 ManifestHandle::listen(const Name& prefix)
 {
-  /* getFace().setInterestFilter( */
-  /*   Name(prefix).append("insert"), */
-  /*   bind(&ManifestHandle::onInterest, this, _1, _2)); */
-  /* getFace().setInterestFilter( */
-  /*   Name(prefix).append("insert check"), */
-  /*   bind(&ManifestHandle::onCheckInterest, this, _1, _2)); */
-
-  // FIXME: move to different handle module
   getFace().setInterestFilter(
     Name(prefix).append("create"),
     bind(&ManifestHandle::onCreateInterest, this, _1, _2));
@@ -205,6 +204,7 @@ ManifestHandle::segInit(ProcessId processId, const RepoCommandParameter& paramet
   map<SegmentNo, int>& processRetry = process.retryCounts;
 
   Name name = parameter.getName();
+  process.name = name;
   SegmentNo startBlockId = parameter.getStartBlockId();
 
   uint64_t initialCredit = m_credit;
@@ -223,9 +223,11 @@ ManifestHandle::segInit(ProcessId processId, const RepoCommandParameter& paramet
 
   for (; segment < startBlockId + initialCredit; ++segment) {
     Name fetchName = name;
+    RepoCommandParameter parameter;
     fetchName.appendSegment(segment);
-    Interest interest(fetchName);
-    interest.setInterestLifetime(m_interestLifetime);
+    parameter.setName(fetchName);
+    Interest interest = util::generateCommandInterest(
+      process.repo, "info", parameter, m_interestLifetime);
     getFace().expressInterest(interest,
                               bind(&ManifestHandle::onSegmentData, this, _1, _2, processId),
                               bind(&ManifestHandle::onSegmentTimeout, this, _1, processId), // Nack
@@ -415,6 +417,9 @@ ManifestHandle::onCheckValidated(const Interest& interest, const Name& prefix)
   }
 
   ProcessInfo& process = m_processes[processId];
+  auto repo = prefix.getSubName(0, prefix.size() - 1);
+  std::cout << "Setting repo: " << repo << " Onto pid " << processId;
+  process.repo = repo;
 
   RepoCommandResponse& response = process.response;
 
@@ -454,7 +459,7 @@ void
 ManifestHandle::processSingleInsertCommand(const Interest& interest,
                                         RepoCommandParameter& parameter)
 {
-  ProcessId processId = generateProcessId();
+  ProcessId processId = parameter.getProcessId();
 
   ProcessInfo& process = m_processes[processId];
 
@@ -469,12 +474,16 @@ ManifestHandle::processSingleInsertCommand(const Interest& interest,
 
   response.setStatusCode(300);
 
-  Interest fetchInterest(parameter.getName());
-  fetchInterest.setInterestLifetime(m_interestLifetime);
-  if (parameter.hasSelectors()) {
-    fetchInterest.setSelectors(parameter.getSelectors());
-  }
-  getFace().expressInterest(fetchInterest,
+  std::cout << "Creating info interest" << std::endl
+    << "Repo: " << process.repo << std::endl
+    << "Name: " << process.name << std::endl;
+
+  RepoCommandParameter infoParameter;
+  infoParameter.setName(parameter.getName());
+  infoParameter.setProcessId(processId);
+  Interest infoInterest = util::generateCommandInterest(
+      process.repo, "info", infoParameter, m_interestLifetime);
+  getFace().expressInterest(infoInterest,
                             bind(&ManifestHandle::onData, this, _1, _2, processId),
                             bind(&ManifestHandle::onTimeout, this, _1, processId), // Nack
                             bind(&ManifestHandle::onTimeout, this, _1, processId));
@@ -498,7 +507,7 @@ ManifestHandle::processSegmentedInsertCommand(const Interest& interest,
       return;
     }
 
-    ProcessId processId = generateProcessId();
+    ProcessId processId = parameter.getProcessId();
     ProcessInfo& process = m_processes[processId];
     RepoCommandResponse& response = process.response;
     response.setStatusCode(100);

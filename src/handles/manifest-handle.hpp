@@ -88,6 +88,9 @@ private:
     map<SegmentNo, int> retryCounts;  ///< to store retrying times of timeout segment
     int credit;  ///< congestion control credits of process
 
+    Name repo;
+    Name name;
+
     /**
      * @brief the latest time point at which EndBlockId must be determined
      *

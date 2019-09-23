@@ -66,6 +66,13 @@ public :
   insert(const Data& data) = 0;
 
   /**
+   * @brief  put manifest into database
+   * @param  data the manifest data should be inserted into database
+   */
+  virtual int64_t
+  insertManifest(const Data& data) = 0;
+
+  /**
    *  @brief  remove the entry in the database by using id
    *  @param  id   id number of entry in the database
    */

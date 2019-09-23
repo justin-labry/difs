@@ -203,24 +203,24 @@ private: // insert state check command
   void
   onCheckValidationFailed(const Interest& interest, const ValidationError& error);
 
-private: // Create manifest command
+private: // manifest info command
   /**
    * @brief handle create(manifest create) command
    */
   void
-  onCreateInterest(const Name& prefix, const Interest& interest);
+  onInfoInterest(const Name& prefix, const Interest& interest);
 
   void
-  onCreateValidated(const Interest& interest, const Name& prefix);
+  onInfoValidated(const Interest& interest, const Name& prefix);
 
   void
-  onCreateValidationFailed(const Interest& interest, const ValidationError& error);
+  onInfoValidationFailed(const Interest& interest, const ValidationError& error);
 
   void
-  processSingleCreateCommand(const Interest& interest, RepoCommandParameter& parameter);
+  processSingleInfoCommand(const Interest& interest, RepoCommandParameter& parameter);
 
   void
-  processSegmentedCreateCommand(const Interest& interest, RepoCommandParameter& parameter);
+  processSegmentedInfoCommand(const Interest& interest, RepoCommandParameter& parameter);
 
 private:
   void

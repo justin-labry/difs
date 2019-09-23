@@ -61,6 +61,9 @@ public:
   virtual int64_t
   insert(const Data& data);
 
+  virtual int64_t
+   insertManifest(const Data& data);
+
   /**
    *  @brief  remove the entry in the database by using id
    *  @param  id   id number of each entry in the database
