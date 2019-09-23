@@ -180,10 +180,6 @@ WriteHandle::writeManifest(ProcessId processId, const Interest& interest)
   int startBlockId = process.startBlockId;
   int endBlockId = process.endBlockId;
 
-  Manifest manifest(repo, name, startBlockId, endBlockId);
-
-  std::cout << "Manifest: " << manifest.toJson();
-
   RepoCommandParameter parameters;
   parameters.setName(name);
   parameters.setProcessId(processId);
@@ -610,7 +606,6 @@ WriteHandle::onInfoValidated(const Interest& interest, const Name& prefix)
     processSegmentedInfoCommand(interest, parameter);
   }
   else {
-    std::cerr << "Do single create" << std::endl;
     processSingleInfoCommand(interest, parameter);
   }
   if (parameter.hasInterestLifetime())
@@ -644,9 +639,6 @@ WriteHandle::processSingleInfoCommand(
     const Interest& interest, RepoCommandParameter& parameter)
 {
 
-  auto name = parameter.getName();
-  std::cout << "Create single: " << name << std::endl;
-
   ProcessId processId = generateProcessId();
   ProcessInfo& process = m_processes[processId];
 
@@ -657,9 +649,6 @@ WriteHandle::processSingleInfoCommand(
       process.endBlockId);
 
   auto json = manifest.toJson();
-
-  std::cout << "Json: " << json.data() << std::endl
-    << "Size: " << json.size() << std::endl;
 
   reply(interest, json);
 }

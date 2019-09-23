@@ -463,8 +463,6 @@ ManifestHandle::processSingleInsertCommand(const Interest& interest,
 
   ProcessInfo& process = m_processes[processId];
 
-  std::cout << "Processing single create: " << parameter.getName() << std::endl;
-
   RepoCommandResponse& response = process.response;
   response.setStatusCode(100);
   response.setProcessId(processId);
@@ -473,10 +471,6 @@ ManifestHandle::processSingleInsertCommand(const Interest& interest,
   reply(interest, response);
 
   response.setStatusCode(300);
-
-  std::cout << "Creating info interest" << std::endl
-    << "Repo: " << process.repo << std::endl
-    << "Name: " << process.name << std::endl;
 
   RepoCommandParameter infoParameter;
   infoParameter.setName(parameter.getName());
@@ -493,7 +487,6 @@ void
 ManifestHandle::processSegmentedInsertCommand(const Interest& interest,
                                            RepoCommandParameter& parameter)
 {
-  std::cout << "Processing segmented create: " << std::endl;
   if (parameter.hasEndBlockId()) {
     //normal fetch segment
     if (!parameter.hasStartBlockId()) {
