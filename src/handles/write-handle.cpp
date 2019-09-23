@@ -639,7 +639,7 @@ WriteHandle::processSingleInfoCommand(
     const Interest& interest, RepoCommandParameter& parameter)
 {
 
-  ProcessId processId = generateProcessId();
+  ProcessId processId = parameter.getProcessId();
   ProcessInfo& process = m_processes[processId];
 
   Manifest manifest(
@@ -658,7 +658,7 @@ WriteHandle::processSegmentedInfoCommand(
     const Interest& interest, RepoCommandParameter& parameter)
 {
   auto name = parameter.getName();
-  std::cout << "Create segmented: " << name << std::endl;
+  // TODO: Implement this
 }
 
 void
