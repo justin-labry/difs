@@ -43,7 +43,7 @@ Manifest::toJson()
   root.put("segments.end", m_endBlockId);
 
   std::stringstream os;
-  pt::write_json(os, root);
+  pt::write_json(os, root, false);
 
   return os.str();
 }
