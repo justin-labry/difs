@@ -90,6 +90,9 @@ protected:
   void
   reply(const Interest& commandInterest, const RepoCommandResponse& response);
 
+  void
+  reply(const Interest& commandInterest, const std::string data);
+
 
   /**
    * @brief extract RepoCommandParameter from a command Interest.
@@ -116,6 +119,15 @@ BaseHandle::reply(const Interest& commandInterest, const RepoCommandResponse& re
 {
   std::shared_ptr<Data> rdata = std::make_shared<Data>(commandInterest.getName());
   rdata->setContent(response.wireEncode());
+  m_keyChain.sign(*rdata);
+  m_face.put(*rdata);
+}
+
+inline void
+BaseHandle::reply(const Interest& commandInterest, const std::string data)
+{
+  std::shared_ptr<Data> rdata = std::make_shared<Data>(commandInterest.getName());
+  rdata->setContent((uint8_t*)(data.data()), data.size());
   m_keyChain.sign(*rdata);
   m_face.put(*rdata);
 }

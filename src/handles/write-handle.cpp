@@ -658,12 +658,10 @@ WriteHandle::processSingleInfoCommand(
 
   auto json = manifest.toJson();
 
-  // FIXME: TLV-LENGTH of sub-element of type 32 exceeds TLV-VALUE boundary of parent block
-  RepoCommandResponse response(
-      Block(reinterpret_cast<const uint8_t*>(json.c_str()), json.size())
-      block
-      );
-  reply(interest, response);
+  std::cout << "Json: " << json.data() << std::endl
+    << "Size: " << json.size() << std::endl;
+
+  reply(interest, json);
 }
 
 void
