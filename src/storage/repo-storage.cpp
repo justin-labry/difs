@@ -89,7 +89,7 @@ RepoStorage::deleteData(const Name& name)
     return false;
   int64_t count = 0;
   while (idName.first != 0) {
-    bool resultDb = m_storage.erase(idName.first);
+    bool resultDb = m_storage.erase(idName.second);
     bool resultIndex = m_index.erase(idName.second); //full name
     if (resultDb && resultIndex) {
       afterDataDeletion(idName.second);
@@ -115,7 +115,7 @@ RepoStorage::deleteData(const Interest& interest)
   bool hasError = false;
   std::pair<int64_t,ndn::Name> idName = m_index.find(interestDelete);
   while (idName.first != 0) {
-    bool resultDb = m_storage.erase(idName.first);
+    bool resultDb = m_storage.erase(idName.second);
     bool resultIndex = m_index.erase(idName.second); //full name
     if (resultDb && resultIndex) {
       afterDataDeletion(idName.second);
@@ -137,7 +137,7 @@ RepoStorage::readData(const Interest& interest) const
 {
   std::pair<int64_t,ndn::Name> idName = m_index.find(interest);
   if (idName.first != 0) {
-    shared_ptr<Data> data = m_storage.read(idName.first);
+    shared_ptr<Data> data = m_storage.read(idName.second);
     if (data) {
       return data;
     }

@@ -37,19 +37,11 @@ public:
   virtual int64_t
   insertManifest(const Data& data);
 
-  /**
-   *  @brief  remove the entry in the database by using id
-   *  @param  id   id number of each entry in the database
-   */
   virtual bool
-  erase(const int64_t id);
+  erase(const Name& name);
 
-  /**
-   *  @brief  get the data from database
-   *  @para   id   id number of each entry in the database, used to find the data
-   */
   virtual std::shared_ptr<Data>
-  read(const int64_t id);
+  read(const Name& name);
 
   /**
    *  @brief  return the size of database
@@ -65,6 +57,12 @@ public:
   fullEnumerate(const std::function<void(const Storage::ItemMeta)>& f);
 
 private:
+  uint64_t
+  hash(std::string const& key);
+
+  std::string
+  sha1Hash(std::string const& key);
+
   int64_t
   writeData(const Data& data, const char* dataType);
 

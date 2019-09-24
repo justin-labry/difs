@@ -9,7 +9,8 @@
 #include "index.hpp"
 
 
-#include <ndn-cxx/util/sha256.hpp>
+#include <boost/format.hpp>
+#include <boost/uuid/sha1.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/range/iterator_range.hpp>
@@ -24,12 +25,28 @@ const char* FsStorage::DIRNAME_DATA = "data";
 const char* FsStorage::DIRNAME_MANIFEST = "manifest";
 
 uint64_t
-hash(std::string const& key)
+FsStorage::hash(std::string const& key)
 {
   uint64_t result = 12345;
   for (auto current = key.begin(); current != key.end(); current += 1) {
     result = 127 * result + static_cast<unsigned char>(*current);
   }
+  return result;
+}
+
+std::string
+FsStorage::sha1Hash(std::string const& key)
+{
+  std::string result;
+  boost::uuids::detail::sha1 sha1;
+  unsigned hashBlock[5] = {0};
+  sha1.process_bytes(key.c_str(), key.size());
+  sha1.get_digest(hashBlock);
+
+  for (int i = 0; i < 5; i += 1) {
+    result += str(boost::format("%08x") % hashBlock[i]);
+  }
+
   return result;
 }
 
@@ -72,26 +89,25 @@ FsStorage::insertManifest(const Data& data)
 int64_t
 FsStorage::writeData(const Data& data, const char* dataType)
 {
-  uint64_t id = hash(data.getName().toUri());
+  auto dirName = sha1Hash(data.getFullName().toUri());
+  uint64_t id = hash(dirName);
 
   Index::Entry entry(data, 0);
-  string name = data.getName().toUri();
-  std::replace(name.begin(), name.end(), '/', '_');
 
-  auto dirName = m_path / dataType / boost::lexical_cast<std::string>(id);
-  boost::filesystem::create_directory(dirName);
+  boost::filesystem::path fsPath = m_path / dataType / dirName;
+  boost::filesystem::create_directory(fsPath);
 
-  std::ofstream outFileName((dirName / FNAME_NAME).string(), std::ios::binary);
+  std::ofstream outFileName((fsPath / FNAME_NAME).string(), std::ios::binary);
   outFileName.write(
       reinterpret_cast<const char*>(entry.getName().wireEncode().wire()),
       entry.getName().wireEncode().size());
 
-  std::ofstream outFileData((dirName / FNAME_DATA).string(), std::ios::binary);
+  std::ofstream outFileData((fsPath / FNAME_DATA).string(), std::ios::binary);
   outFileData.write(
       reinterpret_cast<const char*>(data.wireEncode().wire()),
       data.wireEncode().size());
 
-  std::ofstream outFileLocator((dirName / FNAME_HASH).string(), std::ios::binary);
+  std::ofstream outFileLocator((fsPath / FNAME_HASH).string(), std::ios::binary);
   outFileLocator.write(
       reinterpret_cast<const char*>(entry.getKeyLocatorHash()->data()),
       entry.getKeyLocatorHash()->size());
@@ -100,14 +116,14 @@ FsStorage::writeData(const Data& data, const char* dataType)
 }
 
 bool
-FsStorage::erase(const int64_t id)
+FsStorage::erase(const Name& name)
 {
-  uint64_t id_unsigned = boost::lexical_cast<uint64_t>(id);
-  boost::filesystem::path fsPath(m_path / DIRNAME_DATA / std::to_string(id_unsigned));
+  auto dirName = sha1Hash(name.toUri());
+  boost::filesystem::path fsPath = m_path / DIRNAME_DATA / dirName;
 
   boost::filesystem::file_status fsPathStatus = boost::filesystem::status(fsPath);
   if (!boost::filesystem::is_directory(fsPathStatus)) {
-    std::cerr << id_unsigned << " is not exists" << std::endl;
+    std::cerr << name.toUri() << " is not exists" << std::endl;
     return false;
   }
 
@@ -116,13 +132,13 @@ FsStorage::erase(const int64_t id)
 }
 
 std::shared_ptr<Data>
-FsStorage::read(const int64_t id)
+FsStorage::read(const Name& name)
 {
-  uint64_t id_unsigned = boost::lexical_cast<uint64_t>(id);
-  auto dirName = m_path / DIRNAME_DATA / std::to_string(id_unsigned);
+  auto dirName = sha1Hash(name.toUri());
+  auto fsPath = m_path / DIRNAME_DATA / dirName;
   auto data = make_shared<Data>();
 
-  boost::filesystem::ifstream inFileData(dirName / FNAME_DATA, std::ifstream::binary);
+  boost::filesystem::ifstream inFileData(fsPath / FNAME_DATA, std::ifstream::binary);
   inFileData.seekg(0, inFileData.end);
   int length = inFileData.tellg();
   inFileData.seekg(0, inFileData.beg);

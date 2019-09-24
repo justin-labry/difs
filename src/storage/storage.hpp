@@ -73,18 +73,18 @@ public :
   insertManifest(const Data& data) = 0;
 
   /**
-   *  @brief  remove the entry in the database by using id
-   *  @param  id   id number of entry in the database
+   *  @brief  remove the entry in the database by using full name
+   *  @param  full name full name of entry in the database
    */
   virtual bool
-  erase(const int64_t id) = 0;
+  erase(const Name& name) = 0;
 
   /**
    *  @brief  get the data from database
-   *  @param  id   id number of each entry in the database, used to find the data
+   *  @param  full name   full name of each entry in the database, used to find the data
    */
   virtual std::shared_ptr<Data>
-  read(const int64_t id) = 0;
+  read(const Name& name) = 0;
 
   /**
    *  @brief  return the size of database
