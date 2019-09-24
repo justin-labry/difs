@@ -57,11 +57,14 @@ public:
   fullEnumerate(const std::function<void(const Storage::ItemMeta)>& f);
 
 private:
-  uint64_t
+  int64_t
   hash(std::string const& key);
 
   std::string
   sha1Hash(std::string const& key);
+
+  boost::filesystem::path
+  getPath(const Name& name, const char* dataType);
 
   int64_t
   writeData(const Data& data, const char* dataType);

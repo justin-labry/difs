@@ -24,7 +24,7 @@ const char* FsStorage::FNAME_HASH = "locatorHash";
 const char* FsStorage::DIRNAME_DATA = "data";
 const char* FsStorage::DIRNAME_MANIFEST = "manifest";
 
-uint64_t
+int64_t
 FsStorage::hash(std::string const& key)
 {
   uint64_t result = 12345;
@@ -48,6 +48,12 @@ FsStorage::sha1Hash(std::string const& key)
   }
 
   return result;
+}
+
+boost::filesystem::path
+FsStorage::getPath(const Name& name, const char* dataType)
+{
+  return m_path / dataType / sha1Hash(name.toUri());
 }
 
 FsStorage::FsStorage(const string& dbPath)
@@ -89,12 +95,11 @@ FsStorage::insertManifest(const Data& data)
 int64_t
 FsStorage::writeData(const Data& data, const char* dataType)
 {
-  auto dirName = sha1Hash(data.getFullName().toUri());
-  uint64_t id = hash(dirName);
+  auto id = hash(data.getFullName().toUri());
 
   Index::Entry entry(data, 0);
 
-  boost::filesystem::path fsPath = m_path / dataType / dirName;
+  boost::filesystem::path fsPath = getPath(data.getFullName(), dataType);
   boost::filesystem::create_directory(fsPath);
 
   std::ofstream outFileName((fsPath / FNAME_NAME).string(), std::ios::binary);
@@ -118,8 +123,7 @@ FsStorage::writeData(const Data& data, const char* dataType)
 bool
 FsStorage::erase(const Name& name)
 {
-  auto dirName = sha1Hash(name.toUri());
-  boost::filesystem::path fsPath = m_path / DIRNAME_DATA / dirName;
+  auto fsPath = getPath(name, DIRNAME_DATA);
 
   boost::filesystem::file_status fsPathStatus = boost::filesystem::status(fsPath);
   if (!boost::filesystem::is_directory(fsPathStatus)) {
@@ -134,8 +138,7 @@ FsStorage::erase(const Name& name)
 std::shared_ptr<Data>
 FsStorage::read(const Name& name)
 {
-  auto dirName = sha1Hash(name.toUri());
-  auto fsPath = m_path / DIRNAME_DATA / dirName;
+  auto fsPath = getPath(name.toUri(), DIRNAME_DATA);
   auto data = make_shared<Data>();
 
   boost::filesystem::ifstream inFileData(fsPath / FNAME_DATA, std::ifstream::binary);
