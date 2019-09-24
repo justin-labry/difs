@@ -175,6 +175,7 @@ WriteHandle::writeManifest(ProcessId processId, const Interest& interest)
 {
   ProcessInfo process = m_processes[processId];
 
+  // TODO: Calc hash and select another repo
   std::string repo = process.repo.toUri();
   std::string name = process.name.toUri();
   int startBlockId = process.startBlockId;
