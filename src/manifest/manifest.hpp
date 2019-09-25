@@ -20,6 +20,9 @@ public:
   std::string
   toJson();
 
+  std::string
+  getManifestStorage();
+
 private:
   std::string m_repo;
   std::string m_name;

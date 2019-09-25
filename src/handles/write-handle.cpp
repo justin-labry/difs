@@ -181,11 +181,13 @@ WriteHandle::writeManifest(ProcessId processId, const Interest& interest)
   int startBlockId = process.startBlockId;
   int endBlockId = process.endBlockId;
 
+  Manifest manifest(repo, name, startBlockId, endBlockId);
+
   RepoCommandParameter parameters;
   parameters.setName(name);
   parameters.setProcessId(processId);
   Interest createInterest = util::generateCommandInterest(
-      repo, "create", parameters, m_interestLifetime);
+      manifest.getManifestStorage(), "create", parameters, m_interestLifetime);
 
   getFace().expressInterest(
       createInterest,

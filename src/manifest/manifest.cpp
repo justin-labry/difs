@@ -48,5 +48,11 @@ Manifest::toJson()
   return os.str();
 }
 
+std::string
+Manifest::getManifestStorage() {
+  // FIXME: calc from hash
+  return m_repo;
+}
+
 } // namespace repo
 // vim: cino=g0,N-s,+0 sw=2
