@@ -66,7 +66,7 @@ FsStorage::FsStorage(const string& dbPath)
     boost::filesystem::path fsPath(dbPath);
     boost::filesystem::file_status fsPathStatus = boost::filesystem::status(fsPath);
     if (!boost::filesystem::is_directory(fsPathStatus)) {
-      if (!boost::filesystem::create_directory(boost::filesystem::path(fsPath))) {
+      if (!boost::filesystem::create_directories(boost::filesystem::path(fsPath))) {
         BOOST_THROW_EXCEPTION(Error("Directory '" + dbPath + "' does not exists and cannot be created"));
       }
     }

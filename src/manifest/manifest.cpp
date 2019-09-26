@@ -51,7 +51,9 @@ Manifest::toJson()
 std::string
 Manifest::getManifestStorage() {
   // FIXME: calc from hash
-  return m_repo;
+  std::cout << "Using repo: " << m_repo << std::endl;
+  return "/example/repo/2";
+  /* return m_repo; */
 }
 
 } // namespace repo
