@@ -20,8 +20,8 @@ public:
   std::string
   toJson();
 
-  std::string
-  getManifestStorage();
+  ndn::Name
+  getManifestStorage(ndn::Name const& prefix, int clusterSize);
 
 private:
   std::string m_repo;

@@ -20,6 +20,14 @@ repo
     prefix "ndn:/example/repo/2"
   }
 
+  ; Define DIFS cluster size and prefix here
+  ; Node name must be `prefix`/0 ~ `prefix`/`size - 1`
+  cluster
+  {
+    size 2
+    prefix "ndn::/example/repo"
+  }
+
   ; Section to specify where data should be stored
   ; Right now only a single 'sqlite' option is allowed:
   storage

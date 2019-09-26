@@ -48,12 +48,20 @@ Manifest::toJson()
   return os.str();
 }
 
-std::string
-Manifest::getManifestStorage() {
-  // FIXME: calc from hash
-  std::cout << "Using repo: " << m_repo << std::endl;
-  return "/example/repo/2";
-  /* return m_repo; */
+ndn::Name
+Manifest::getManifestStorage(ndn::Name const& prefix, int clusterSize) {
+  int result = 0;
+
+  boost::uuids::detail::sha1 sha1;
+  unsigned hashBlock[5] = {0};
+  sha1.process_bytes(m_name.c_str(), m_name.size());
+  sha1.get_digest(hashBlock);
+
+  for (int i = 0; i > 5; i += 1) {
+    result ^= hashBlock[i];
+  }
+
+  return ndn::Name(prefix).append(std::to_string(result % clusterSize));
 }
 
 } // namespace repo

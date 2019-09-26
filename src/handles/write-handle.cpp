@@ -34,13 +34,17 @@ static const milliseconds DEFAULT_INTEREST_LIFETIME(4000);
 
 WriteHandle::WriteHandle(Face& face, RepoStorage& storageHandle, KeyChain& keyChain,
                          Scheduler& scheduler,
-                         Validator& validator)
+                         Validator& validator,
+                         Name const& clusterPrefix,
+                         int clusterSize)
   : BaseHandle(face, storageHandle, keyChain, scheduler)
   , m_validator(validator)
   , m_retryTime(RETRY_TIMEOUT)
   , m_credit(DEFAULT_CREDIT)
   , m_noEndTimeout(NOEND_TIMEOUT)
   , m_interestLifetime(DEFAULT_INTEREST_LIFETIME)
+  , m_clusterPrefix(clusterPrefix)
+  , m_clusterSize(clusterSize)
 {
 }
 
@@ -183,11 +187,16 @@ WriteHandle::writeManifest(ProcessId processId, const Interest& interest)
 
   Manifest manifest(repo, name, startBlockId, endBlockId);
 
+  auto manifestRepo = manifest.getManifestStorage(
+      m_clusterPrefix, m_clusterSize);
+
+  std::cout << "Using repo: " << manifestRepo << std::endl;
+
   RepoCommandParameter parameters;
   parameters.setName(name);
   parameters.setProcessId(processId);
   Interest createInterest = util::generateCommandInterest(
-      manifest.getManifestStorage(), "create", parameters, m_interestLifetime);
+      manifestRepo, "create", parameters, m_interestLifetime);
 
   getFace().expressInterest(
       createInterest,
