@@ -116,9 +116,16 @@ ManifestHandle::onDataValidated(const Interest& interest, const Data& data, Proc
   RepoCommandResponse& response = process.response;
 
   if (response.getInsertNum() == 0) {
-    getStorageHandle().insertManifest(data);
-   // getStorageHandle().insertEntry(data);
-   // getStoreIndex().insert(data);
+    /* getStorageHandle().insertManifest(data); */
+    auto content = data.getContent();
+    std::string json(
+        content.value(),
+        content.value() + content.value_size()
+        );
+    // TODO: manipulate this data and save it.
+    std::cout << "Data: " << json << std::endl;
+
+    getStorageHandle().insertManifest(sign(interest, json));
     response.setInsertNum(1);
   }
 

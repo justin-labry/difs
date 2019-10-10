@@ -93,6 +93,9 @@ protected:
   void
   reply(const Interest& commandInterest, const std::string data);
 
+  ndn::Data
+  sign(const Interest& interest, const std::string& data);
+
 
   /**
    * @brief extract RepoCommandParameter from a command Interest.

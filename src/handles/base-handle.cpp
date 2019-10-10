@@ -29,4 +29,13 @@ BaseHandle::generateProcessId()
   return ndn::random::generateWord64();
 }
 
+ndn::Data
+BaseHandle::sign(const Interest& interest, const std::string& data)
+{
+  Data rdata(interest.getName());
+  rdata.setContent((uint8_t*)(data.data()), data.size());
+  m_keyChain.sign(rdata);
+  return rdata;
+}
+
 } // namespace repo

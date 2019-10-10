@@ -35,12 +35,19 @@ Manifest::toJson()
   namespace pt = boost::property_tree;
 
   pt::ptree root;
-  root.put("name", m_name);
-  root.put("hash", m_hash);
-  root.put("repo", m_repo);
+  root.put("info.name", m_name);
+  root.put("info.hash", m_hash);
 
-  root.put("segments.start", m_startBlockId);
-  root.put("segments.end", m_endBlockId);
+  pt::ptree children;
+
+  pt::ptree storage;
+  storage.put("storage_name", m_repo);
+  storage.put("segment.start", m_startBlockId);
+  storage.put("segment.end", m_endBlockId);
+
+  children.push_back(std::make_pair("", storage));
+
+  root.add_child("storages", children);
 
   std::stringstream os;
   pt::write_json(os, root, false);
