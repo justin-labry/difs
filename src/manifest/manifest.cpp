@@ -38,16 +38,18 @@ Manifest::toJson()
   root.put("info.name", m_name);
   root.put("info.hash", m_hash);
 
-  pt::ptree children;
+  if (!m_repo.empty()) {
+    pt::ptree children;
 
-  pt::ptree storage;
-  storage.put("storage_name", m_repo);
-  storage.put("segment.start", m_startBlockId);
-  storage.put("segment.end", m_endBlockId);
+    pt::ptree storage;
+    storage.put("storage_name", m_repo);
+    storage.put("segment.start", m_startBlockId);
+    storage.put("segment.end", m_endBlockId);
 
-  children.push_back(std::make_pair("", storage));
+    children.push_back(std::make_pair("", storage));
 
-  root.add_child("storages", children);
+    root.add_child("storages", children);
+  }
 
   std::stringstream os;
   pt::write_json(os, root, false);
