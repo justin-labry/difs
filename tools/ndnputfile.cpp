@@ -70,7 +70,6 @@ public:
 
   NdnPutFile()
     : isUnversioned(false)
-    , isSingle(false)
     , useDigestSha256(false)
     , freshnessPeriod(DEFAULT_FRESHNESS_PERIOD)
     , interestLifetime(DEFAULT_INTEREST_LIFETIME)
@@ -108,9 +107,6 @@ private:
   onInterest(const ndn::Name& prefix, const ndn::Interest& interest);
 
   void
-  onSingleInterest(const ndn::Name& prefix, const ndn::Interest& interest);
-
-  void
   onRegisterSuccess(const ndn::Name& prefix);
 
   void
@@ -137,7 +133,6 @@ private:
 
 public:
   bool isUnversioned;
-  bool isSingle;
   bool useDigestSha256;
   std::string identityForData;
   std::string identityForCommand;
@@ -201,7 +196,7 @@ NdnPutFile::prepareNextData(uint64_t referenceSegmentNo)
                                     .appendSegment(m_currentSegmentNo));
 
     if (insertStream->peek() == std::istream::traits_type::eof()) {
-      data->setFinalBlockId(ndn::name::Component::fromSegment(m_currentSegmentNo));
+      data->setFinalBlock(ndn::name::Component::fromSegment(m_currentSegmentNo));
       m_isFinished = true;
     }
 
@@ -225,9 +220,6 @@ NdnPutFile::run()
   if (isVerbose)
     std::cerr << "setInterestFilter for " << m_dataPrefix << std::endl;
   m_face.setInterestFilter(m_dataPrefix,
-                           isSingle ?
-                           bind(&NdnPutFile::onSingleInterest, this, _1, _2)
-                           :
                            bind(&NdnPutFile::onInterest, this, _1, _2),
                            bind(&NdnPutFile::onRegisterSuccess, this, _1),
                            bind(&NdnPutFile::onRegisterFailed, this, _1, _2));
@@ -250,9 +242,7 @@ NdnPutFile::startInsertCommand()
 {
   RepoCommandParameter parameters;
   parameters.setName(m_dataPrefix);
-  if (!isSingle) {
-    parameters.setStartBlockId(0);
-  }
+  parameters.setStartBlockId(0);
 
   ndn::Interest commandInterest = generateCommandInterest(repoPrefix, "insert", parameters);
   m_face.expressInterest(commandInterest,
@@ -318,43 +308,10 @@ NdnPutFile::onInterest(const ndn::Name& prefix, const ndn::Interest& interest)
 
   if (m_isFinished) {
     uint64_t final = m_currentSegmentNo - 1;
-    item->second->setFinalBlockId(ndn::name::Component::fromSegment(final));
+    item->second->setFinalBlock(ndn::name::Component::fromSegment(final));
 
   }
   m_face.put(*item->second);
-}
-
-void
-NdnPutFile::onSingleInterest(const ndn::Name& prefix, const ndn::Interest& interest)
-{
-  BOOST_ASSERT(prefix == m_dataPrefix);
-
-  if (prefix != interest.getName()) {
-    if (isVerbose) {
-      std::cerr << "Received unexpected interest " << interest << std::endl;
-    }
-    return;
-  }
-
-  uint8_t buffer[DEFAULT_BLOCK_SIZE];
-  std::streamsize readSize =
-    boost::iostreams::read(*insertStream, reinterpret_cast<char*>(buffer), DEFAULT_BLOCK_SIZE);
-
-  if (readSize <= 0) {
-    BOOST_THROW_EXCEPTION(Error("Error reading from the input stream"));
-  }
-
-  if (insertStream->peek() != std::istream::traits_type::eof()) {
-    BOOST_THROW_EXCEPTION(Error("Input data does not fit into one Data packet"));
-  }
-
-  shared_ptr<ndn::Data> data = make_shared<ndn::Data>(m_dataPrefix);
-  data->setContent(buffer, readSize);
-  data->setFreshnessPeriod(freshnessPeriod);
-  signData(*data);
-  m_face.put(*data);
-
-  m_isFinished = true;
 }
 
 void
@@ -407,12 +364,6 @@ NdnPutFile::onCheckCommandResponse(const ndn::Interest& interest, const ndn::Dat
   if (m_isFinished) {
     uint64_t insertCount = response.getInsertNum();
 
-    if (isSingle) {
-      if (insertCount == 1) {
-        m_face.getIoService().stop();
-        return;
-      }
-    }
     // Technically, the check should not infer, but directly has signal from repo that
     // write operation has been finished
 
@@ -461,7 +412,6 @@ usage()
           "\n"
           " Write a file into a repo.\n"
           "  -u: unversioned: do not add a version component\n"
-          "  -s: single: do not add version or segment component, implies -u\n"
           "  -D: use DigestSha256 signing method instead of SignatureSha256WithRsa\n"
           "  -i: specify identity used for signing Data\n"
           "  -I: specify identity used for signing commands\n"
@@ -481,13 +431,10 @@ main(int argc, char** argv)
 {
   NdnPutFile ndnPutFile;
   int opt;
-  while ((opt = getopt(argc, argv, "usDi:I:x:l:w:vh")) != -1) {
+  while ((opt = getopt(argc, argv, "uDi:I:x:l:w:vh")) != -1) {
     switch (opt) {
     case 'u':
       ndnPutFile.isUnversioned = true;
-      break;
-    case 's':
-      ndnPutFile.isSingle = true;
       break;
     case 'D':
       ndnPutFile.useDigestSha256 = true;
