@@ -174,7 +174,6 @@ FsStorage::FsStorage::fullEnumerate(const std::function<void(const Storage::Item
     boost::filesystem::path p = entry.path();
 
     ItemMeta item;
-    item.id = boost::lexical_cast<uint64_t>(std::stoull(p.filename().string()));
 
     boost::filesystem::ifstream isName(p / FNAME_NAME, std::ifstream::binary);
     isName.seekg(0, isName.end);
@@ -186,6 +185,8 @@ FsStorage::FsStorage::fullEnumerate(const std::function<void(const Storage::Item
     item.fullName.wireDecode(Block(
           reinterpret_cast<const uint8_t*>(bufferName),
           lengthName));
+
+    item.id = hash(item.fullName.toUri());
 
     boost::filesystem::ifstream isLocatorHash(p / FNAME_HASH, std::ifstream::binary);
     isLocatorHash.seekg(0, isLocatorHash.end);
