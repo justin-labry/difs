@@ -72,9 +72,15 @@ ManifestHandle::onValidated(const Interest& interest, const Name& prefix)
 
   auto processId = parameter.getProcessId();
   ProcessInfo& process = m_processes[processId];
-  auto repo = prefix.getSubName(0, prefix.size() - 1);
+
+  auto repo = prefix.getSubName(0, prefix.size() - 2);
+  auto name = parameter.getName();
+  repo.append(
+      name.getSubName(name.size() - 2, 1)
+      );
+
   process.repo = repo;
-  process.name = parameter.getName();
+  process.name = name;
 
   if (parameter.hasStartBlockId() || parameter.hasEndBlockId()) {
     if (parameter.hasSelectors()) {
