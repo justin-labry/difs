@@ -107,6 +107,9 @@ private:
   onInterest(const ndn::Name& prefix, const ndn::Interest& interest);
 
   void
+  sendManifest(const ndn::Name& prefix, const ndn::Interest& interest);
+
+  void
   onRegisterSuccess(const ndn::Name& prefix);
 
   void
@@ -242,7 +245,6 @@ NdnPutFile::startInsertCommand()
 {
   RepoCommandParameter parameters;
   parameters.setName(m_dataPrefix);
-  parameters.setStartBlockId(0);
 
   ndn::Interest commandInterest = generateCommandInterest(repoPrefix, "insert", parameters);
   m_face.expressInterest(commandInterest,
@@ -276,12 +278,12 @@ void
 NdnPutFile::onInterest(const ndn::Name& prefix, const ndn::Interest& interest)
 {
   if (interest.getName().size() != prefix.size() + 1) {
-    if (isVerbose) {
-      std::cerr << "Error processing incoming interest " << interest << ": "
-                << "Unrecognized Interest" << std::endl;
-    }
+    // TODO: reply manifest
+    sendManifest(prefix, interest);
     return;
   }
+
+  std::cout << "Name: " << interest.getName() << std::endl;
 
   uint64_t segmentNo;
   try {
@@ -312,6 +314,19 @@ NdnPutFile::onInterest(const ndn::Name& prefix, const ndn::Interest& interest)
 
   }
   m_face.put(*item->second);
+}
+
+void
+NdnPutFile::sendManifest(const ndn::Name& prefix, const ndn::Interest& interest)
+{
+  std::cout << interest.getName() << std::endl;
+  ndn::Data data(interest.getName());
+  std::string manifest("xxxx");
+  data.setContent((uint8_t*)(manifest.data()), manifest.size());
+  data.setFreshnessPeriod(freshnessPeriod);
+  signData(data);
+
+  m_face.put(data);
 }
 
 void

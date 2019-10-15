@@ -112,17 +112,30 @@ WriteHandle::onDataValidated(const Interest& interest, const Data& data, Process
     return;
   }
 
+  std::cout << "Got manifest" << std::endl;
+
+  // TODO: Get/Parse manifest and send interest for data
+
   ProcessInfo& process = m_processes[processId];
   RepoCommandResponse& response = process.response;
 
-  if (response.getInsertNum() == 0) {
-    getStorageHandle().insertData(data);
-   // getStorageHandle().insertEntry(data);
-   // getStoreIndex().insert(data);
-    response.setInsertNum(1);
-  }
 
-  deferredDeleteProcess(processId);
+  // TODO: do with data
+
+  auto content = data.getContent();
+  std::string json(
+      content.value(),
+      content.value() + content.value_size()
+      );
+
+  std::cout << interest.getName() << json << std::endl;
+
+  RepoCommandParameter parameter;
+  parameter.setName(interest.getName());
+  parameter.setStartBlockId(0);
+
+  segInit(processId, parameter);
+
 }
 
 void
