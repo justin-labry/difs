@@ -20,6 +20,9 @@
 #include "../src/repo-command-parameter.hpp"
 #include "../src/repo-command-response.hpp"
 
+#include "../src/manifest/manifest.hpp"
+#include "../src/manifest/manifest.cpp"
+
 #include <ndn-cxx/face.hpp>
 #include <ndn-cxx/security/command-interest-signer.hpp>
 #include <ndn-cxx/security/key-chain.hpp>
@@ -159,6 +162,8 @@ private:
   bool m_isFinished;
   ndn::Name m_dataPrefix;
 
+  size_t m_bytes;
+
   typedef std::map<uint64_t, shared_ptr<ndn::Data> > DataContainer;
   DataContainer m_data;
   ndn::security::CommandInterestSigner m_cmdSigner;
@@ -222,6 +227,9 @@ NdnPutFile::run()
 
   if (isVerbose)
     std::cerr << "setInterestFilter for " << m_dataPrefix << std::endl;
+
+  m_bytes = insertStream->tellg();
+  insertStream->seekg(0, std::ios::beg);
   m_face.setInterestFilter(m_dataPrefix,
                            bind(&NdnPutFile::onInterest, this, _1, _2),
                            bind(&NdnPutFile::onRegisterSuccess, this, _1),
@@ -278,12 +286,9 @@ void
 NdnPutFile::onInterest(const ndn::Name& prefix, const ndn::Interest& interest)
 {
   if (interest.getName().size() != prefix.size() + 1) {
-    // TODO: reply manifest
     sendManifest(prefix, interest);
     return;
   }
-
-  std::cout << "Name: " << interest.getName() << std::endl;
 
   uint64_t segmentNo;
   try {
@@ -321,8 +326,13 @@ NdnPutFile::sendManifest(const ndn::Name& prefix, const ndn::Interest& interest)
 {
   std::cout << interest.getName() << std::endl;
   ndn::Data data(interest.getName());
-  std::string manifest("xxxx");
-  data.setContent((uint8_t*)(manifest.data()), manifest.size());
+  auto blockCount = m_bytes / DEFAULT_BLOCK_SIZE + (m_bytes % DEFAULT_BLOCK_SIZE != 0);
+
+  std::cout << "Block Count: " << blockCount << std::endl;
+
+  Manifest manifest("", interest.getName().toUri(), 0, blockCount - 1);
+  std::string json = manifest.toInfoJson();
+  data.setContent((uint8_t*)(json.data()), json.size());
   data.setFreshnessPeriod(freshnessPeriod);
   signData(data);
 
@@ -513,7 +523,7 @@ main(int argc, char** argv)
     ndnPutFile.run();
   }
   else {
-    std::ifstream inputFileStream(argv[2], std::ios::in | std::ios::binary);
+    std::ifstream inputFileStream(argv[2], std::ios::in | std::ios::binary | std::ios::ate);
     if (!inputFileStream.is_open()) {
       std::cerr << "ERROR: cannot open " << argv[2] << std::endl;
       return 1;

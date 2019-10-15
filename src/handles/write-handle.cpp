@@ -128,10 +128,10 @@ WriteHandle::onDataValidated(const Interest& interest, const Data& data, Process
       content.value() + content.value_size()
       );
 
-  std::cout << interest.getName() << json << std::endl;
+  Manifest manifest = Manifest::fromInfoJson(json);
 
   RepoCommandParameter parameter;
-  parameter.setName(interest.getName());
+  parameter.setName(manifest.getName());
   parameter.setStartBlockId(0);
 
   segInit(processId, parameter);

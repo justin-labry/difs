@@ -26,6 +26,48 @@ Manifest::makeHash()
   return result;
 }
 
+Manifest
+Manifest::fromInfoJson(std::string json)
+{
+  namespace pt = boost::property_tree;
+
+  pt::ptree root;
+  std::stringstream ss;
+  ss << json;
+  pt::read_json(ss, root);
+
+  std::string name = root.get<std::string>("name");
+  std::string hash = root.get<std::string>("hash");
+  int segment = root.get<int>("segment");
+  Manifest manifest("", name, 0, segment);
+  if (manifest.getHash() != hash) {
+    std::cerr << "Hash mismatch" << std::endl;
+  }
+  manifest.setHash(hash);
+
+  return manifest;
+}
+
+std::string
+Manifest::toInfoJson()
+{
+  if (m_hash.empty()) {
+    m_hash = makeHash();
+  }
+
+  namespace pt = boost::property_tree;
+
+  pt::ptree root;
+  root.put("name", m_name);
+  root.put("hash", m_hash);
+  root.put("segment", m_endBlockId);
+
+  std::stringstream os;
+  pt::write_json(os, root, false);
+
+  return os.str();
+}
+
 std::string
 Manifest::toJson()
 {
@@ -50,6 +92,9 @@ Manifest::toJson()
 
     root.add_child("storages", children);
   }
+  else {
+    root.put("segment", m_endBlockId);
+  }
 
   std::stringstream os;
   pt::write_json(os, root, false);
@@ -71,6 +116,46 @@ Manifest::getManifestStorage(ndn::Name const& prefix, int clusterSize) {
   }
 
   return ndn::Name(prefix).append(std::to_string(result % clusterSize));
+}
+
+std::string
+Manifest::getRepo()
+{
+  return m_repo;
+}
+
+std::string
+Manifest::getName()
+{
+  return m_name;
+}
+
+std::string
+Manifest::getHash()
+{
+  if (m_hash.empty()) {
+    m_hash = makeHash();
+  }
+
+  return m_hash;
+}
+
+void
+Manifest::setHash(std::string digest)
+{
+  m_hash = digest;
+}
+
+int
+Manifest::getStartBlockId()
+{
+  return m_startBlockId;
+}
+
+int
+Manifest::getEndBlockId()
+{
+  return m_endBlockId;
 }
 
 } // namespace repo

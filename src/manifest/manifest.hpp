@@ -20,8 +20,32 @@ public:
   std::string
   toJson();
 
+  std::string
+  toInfoJson();
+
+  static Manifest
+  fromInfoJson(std::string json);
+
   ndn::Name
   getManifestStorage(ndn::Name const& prefix, int clusterSize);
+
+  std::string
+  getRepo();
+
+  std::string
+  getName();
+
+  std::string
+  getHash();
+
+  void
+  setHash(std::string digest);
+
+  int
+  getStartBlockId();
+
+  int
+  getEndBlockId();
 
 private:
   std::string m_repo;

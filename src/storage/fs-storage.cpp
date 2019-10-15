@@ -89,6 +89,7 @@ FsStorage::insert(const Data& data)
 int64_t
 FsStorage::insertManifest(const Data& data)
 {
+  // FIXME: Use id from hash
   return writeData(data, DIRNAME_MANIFEST);
 }
 
