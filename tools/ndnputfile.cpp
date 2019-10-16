@@ -330,7 +330,7 @@ NdnPutFile::sendManifest(const ndn::Name& prefix, const ndn::Interest& interest)
 
   std::cout << "Block Count: " << blockCount << std::endl;
 
-  Manifest manifest("", interest.getName().toUri(), 0, blockCount - 1);
+  Manifest manifest("", interest.getName().toUri(), 0, blockCount);
   std::string json = manifest.toInfoJson();
   data.setContent((uint8_t*)(json.data()), json.size());
   data.setFreshnessPeriod(freshnessPeriod);
