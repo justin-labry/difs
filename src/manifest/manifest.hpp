@@ -7,10 +7,17 @@ namespace repo {
 
 class Manifest
 {
+  struct Repo
+  {
+    std::string name;
+    int start;
+    int end;
+  };
+
 public:
-  Manifest(std::string repo, std::string name, int startBlockId, int endBlockId)
-  : m_repo(repo)
-  , m_name(name)
+  Manifest(std::string name, int startBlockId, int endBlockId)
+  : m_name(name)
+  , m_repos(std::list<Repo>())
   , m_startBlockId(startBlockId)
   , m_endBlockId(endBlockId)
   {}
@@ -19,6 +26,9 @@ public:
 
   std::string
   toJson();
+
+  static Manifest
+  fromJson(std::string json);
 
   std::string
   toInfoJson();
@@ -29,8 +39,11 @@ public:
   ndn::Name
   getManifestStorage(ndn::Name const& prefix, int clusterSize);
 
-  std::string
-  getRepo();
+  std::list<Repo>
+  getRepos();
+
+  void
+  appendRepo(std::string repoName, int start, int end);
 
   std::string
   getName();
@@ -44,13 +57,19 @@ public:
   int
   getStartBlockId();
 
+  void
+  setStartBlockId();
+
   int
   getEndBlockId();
 
+  void
+  setEndBlockId();
+
 private:
-  std::string m_repo;
   std::string m_name;
   std::string m_hash;
+  std::list<Repo> m_repos;
 
   int m_startBlockId;
   int m_endBlockId;

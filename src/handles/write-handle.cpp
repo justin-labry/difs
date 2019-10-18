@@ -198,7 +198,8 @@ WriteHandle::writeManifest(ProcessId processId, const Interest& interest)
   int startBlockId = process.startBlockId;
   int endBlockId = process.endBlockId;
 
-  Manifest manifest(repo, name, startBlockId, endBlockId);
+  Manifest manifest(name, startBlockId, endBlockId);
+  manifest.appendRepo(repo, startBlockId, endBlockId);
 
   auto manifestRepo = manifest.getManifestStorage(
       m_clusterPrefix, m_clusterSize);
@@ -668,7 +669,6 @@ WriteHandle::processSingleInfoCommand(
   ProcessInfo& process = m_processes[processId];
 
   Manifest manifest(
-      process.repo.toUri(),
       process.name.toUri(),
       process.startBlockId,
       process.endBlockId);
