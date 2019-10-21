@@ -34,8 +34,8 @@ public:
   virtual int64_t
   insert(const Data& data);
 
-  virtual int64_t
-  insertManifest(const Data& data);
+  virtual std::string
+  insertManifest(const Manifest& data);
 
   virtual bool
   erase(const Name& name);

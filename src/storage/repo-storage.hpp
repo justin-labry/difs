@@ -23,6 +23,7 @@
 #include "../common.hpp"
 #include "storage.hpp"
 #include "index.hpp"
+#include "index-manifest.hpp"
 #include "../repo-command-parameter.hpp"
 
 #include <ndn-cxx/exclude.hpp>
@@ -68,7 +69,7 @@ public:
    * @brief  insert manifest into repo
    */
   bool
-  insertManifest(const Data& data);
+  insertManifest(const Manifest& manifest);
 
   /**
    *  @brief   delete data from repo
@@ -108,7 +109,7 @@ public:
 
 private:
   Index m_index;
-  Index m_manifestIndex;
+  IndexManifest m_manifestIndex;
   Storage& m_storage;
 };
 

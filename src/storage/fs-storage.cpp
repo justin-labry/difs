@@ -86,11 +86,13 @@ FsStorage::insert(const Data& data)
   return writeData(data, DIRNAME_DATA);
 }
 
-int64_t
-FsStorage::insertManifest(const Data& data)
+std::string
+FsStorage::insertManifest(const Manifest& manifest)
 {
   // FIXME: Use id from hash
-  return writeData(data, DIRNAME_MANIFEST);
+  // return writeData(data, DIRNAME_MANIFEST);
+  std::cout << "Inserting manifest" << manifest.toJson() << std::endl;
+  return manifest.getHash();
 }
 
 int64_t

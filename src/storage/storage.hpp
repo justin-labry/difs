@@ -23,6 +23,7 @@
 #include <iostream>
 #include <stdlib.h>
 #include "../common.hpp"
+#include "../manifest/manifest.hpp"
 
 namespace repo {
 
@@ -69,8 +70,8 @@ public :
    * @brief  put manifest into database
    * @param  data the manifest data should be inserted into database
    */
-  virtual int64_t
-  insertManifest(const Data& data) = 0;
+  virtual std::string
+  insertManifest(const Manifest& data) = 0;
 
   /**
    *  @brief  remove the entry in the database by using full name

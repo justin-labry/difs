@@ -11,7 +11,7 @@
 namespace repo {
 
 std::string
-Manifest::makeHash()
+Manifest::makeHash() const
 {
   std::string result;
   boost::uuids::detail::sha1 sha1;
@@ -93,7 +93,7 @@ Manifest::fromJson(std::string json)
 }
 
 std::string
-Manifest::toJson()
+Manifest::toJson() const
 {
   namespace pt = boost::property_tree;
 
@@ -156,13 +156,13 @@ Manifest::appendRepo(std::string repoName, int start, int end)
 }
 
 std::string
-Manifest::getName()
+Manifest::getName() const
 {
   return m_name;
 }
 
 std::string
-Manifest::getHash()
+Manifest::getHash() const
 {
   if (!m_hash.empty()) {
     return makeHash();

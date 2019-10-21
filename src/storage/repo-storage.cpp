@@ -66,17 +66,17 @@ RepoStorage::insertData(const Data& data)
 }
 
 bool
-RepoStorage::insertManifest(const Data& data)
+RepoStorage::insertManifest(const Manifest& manifest)
 {
-  bool isExist = m_manifestIndex.hasData(data);
+  bool isExist = m_manifestIndex.hasData(manifest);
   if (isExist)
     BOOST_THROW_EXCEPTION(Error("The entry manifest has already in the skiplist. Cannot be inserted!"));
-  int64_t id = m_storage.insertManifest(data);
-  if (id = -1)
+  std::string hash = m_storage.insertManifest(manifest);
+  if (hash == "")
     return false;
-  bool didInsert = m_manifestIndex.insert(data, id);
+  bool didInsert = m_manifestIndex.insert(manifest, hash);
   if (didInsert)
-    afterManifestInsertion(data.getName());
+    afterManifestInsertion(manifest.getHash());
   return didInsert;
 }
 

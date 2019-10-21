@@ -25,7 +25,7 @@ public:
 public:
 
   std::string
-  toJson();
+  toJson() const;
 
   static Manifest
   fromJson(std::string json);
@@ -46,10 +46,10 @@ public:
   appendRepo(std::string repoName, int start, int end);
 
   std::string
-  getName();
+  getName() const;
 
   std::string
-  getHash();
+  getHash() const;
 
   void
   setHash(std::string digest);
@@ -76,7 +76,7 @@ private:
 
 private:
   std::string
-  makeHash();
+  makeHash() const;
 };
 
 } // namespace repo
