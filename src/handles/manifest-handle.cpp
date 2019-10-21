@@ -128,10 +128,13 @@ ManifestHandle::onDataValidated(const Interest& interest, const Data& data, Proc
         content.value(),
         content.value() + content.value_size()
         );
-    // TODO: manipulate this data and save it.
     std::cout << "Data: " << json << std::endl;
 
-    getStorageHandle().insertManifest(sign(interest, json));
+    Manifest manifest = Manifest::fromJson(json);
+
+    // TODO: manipulate this data and save it.
+
+    getStorageHandle().insertManifest(manifest);
     response.setInsertNum(1);
   }
 

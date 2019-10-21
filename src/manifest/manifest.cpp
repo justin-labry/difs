@@ -83,8 +83,8 @@ Manifest::fromJson(std::string json)
 
   for (auto& item : root.get_child("storages")) {
     std::string repoName = item.second.get<std::string>("storage_name");
-    int start = item.second.get<int>("setment.start");
-    int end = item.second.get<int>("setment.end");
+    int start = item.second.get<int>("segment.start");
+    int end = item.second.get<int>("segment.end");
 
     manifest.appendRepo(repoName, start, end);
   }
@@ -164,7 +164,7 @@ Manifest::getName() const
 std::string
 Manifest::getHash() const
 {
-  if (!m_hash.empty()) {
+  if (m_hash.empty()) {
     return makeHash();
   }
   return m_hash;

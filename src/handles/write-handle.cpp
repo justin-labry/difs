@@ -673,6 +673,12 @@ WriteHandle::processSingleInfoCommand(
       process.startBlockId,
       process.endBlockId);
 
+  std::string repo = process.repo.toUri();
+  int startBlockId = process.startBlockId;
+  int endBlockId = process.endBlockId;
+
+  manifest.appendRepo(repo, startBlockId, endBlockId);
+
   auto json = manifest.toJson();
 
   reply(interest, json);
