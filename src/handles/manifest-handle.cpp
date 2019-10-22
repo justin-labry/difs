@@ -32,13 +32,15 @@ static const milliseconds DEFAULT_INTEREST_LIFETIME(4000);
 
 ManifestHandle::ManifestHandle(Face& face, RepoStorage& storageHandle, KeyChain& keyChain,
                          Scheduler& scheduler,
-                         Validator& validator)
+                         Validator& validator,
+                         Name const& clusterPrefix)
   : BaseHandle(face, storageHandle, keyChain, scheduler)
   , m_validator(validator)
   , m_retryTime(RETRY_TIMEOUT)
   , m_credit(DEFAULT_CREDIT)
   , m_noEndTimeout(NOEND_TIMEOUT)
   , m_interestLifetime(DEFAULT_INTEREST_LIFETIME)
+  , m_clusterPrefix(clusterPrefix)
 {
 }
 
@@ -73,11 +75,10 @@ ManifestHandle::onValidated(const Interest& interest, const Name& prefix)
   auto processId = parameter.getProcessId();
   ProcessInfo& process = m_processes[processId];
 
-  auto repo = prefix.getSubName(0, prefix.size() - 2);
-  auto name = parameter.getName();
-  repo.append(
-      name.getSubName(name.size() - 2, 1)
-      );
+  auto repo = m_clusterPrefix;
+  auto paramName = parameter.getName();
+  repo.append(paramName.getSubName(0, 1));
+  auto name = paramName.getSubName(1, paramName.size());
 
   process.repo = repo;
   process.name = name;

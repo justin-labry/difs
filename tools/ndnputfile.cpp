@@ -71,8 +71,7 @@ public:
   };
 
   NdnPutFile()
-    : isUnversioned(false)
-    , useDigestSha256(false)
+    : useDigestSha256(false)
     , freshnessPeriod(DEFAULT_FRESHNESS_PERIOD)
     , interestLifetime(DEFAULT_INTEREST_LIFETIME)
     , hasTimeout(false)
@@ -80,7 +79,6 @@ public:
     , insertStream(0)
     , isVerbose(false)
     , m_scheduler(m_face.getIoService())
-    , m_timestampVersion(toUnixTimestamp(system_clock::now()).count())
     , m_processId(0)
     , m_checkPeriod(DEFAULT_CHECK_PERIOD)
     , m_currentSegmentNo(0)
@@ -137,7 +135,6 @@ private:
                           const RepoCommandParameter& commandParameter);
 
 public:
-  bool isUnversioned;
   bool useDigestSha256;
   std::string identityForData;
   std::string identityForCommand;
@@ -154,7 +151,6 @@ private:
   ndn::Face m_face;
   ndn::Scheduler m_scheduler;
   ndn::KeyChain m_keyChain;
-  uint64_t m_timestampVersion;
   uint64_t m_processId;
   milliseconds m_checkPeriod;
   size_t m_currentSegmentNo;
@@ -221,8 +217,6 @@ void
 NdnPutFile::run()
 {
   m_dataPrefix = ndnName;
-  if (!isUnversioned)
-    m_dataPrefix.appendVersion(m_timestampVersion);
 
   if (isVerbose)
     std::cerr << "setInterestFilter for " << m_dataPrefix << std::endl;
@@ -435,7 +429,6 @@ usage()
           "  [-x freshness] [-l lifetime] [-w timeout] repo-prefix ndn-name filename\n"
           "\n"
           " Write a file into a repo.\n"
-          "  -u: unversioned: do not add a version component\n"
           "  -D: use DigestSha256 signing method instead of SignatureSha256WithRsa\n"
           "  -i: specify identity used for signing Data\n"
           "  -I: specify identity used for signing commands\n"
@@ -457,9 +450,6 @@ main(int argc, char** argv)
   int opt;
   while ((opt = getopt(argc, argv, "uDi:I:x:l:w:vh")) != -1) {
     switch (opt) {
-    case 'u':
-      ndnPutFile.isUnversioned = true;
-      break;
     case 'D':
       ndnPutFile.useDigestSha256 = true;
       break;

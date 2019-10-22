@@ -124,7 +124,7 @@ Repo::Repo(boost::asio::io_service& ioService, const RepoConfig& config)
   , m_writeHandle(m_face, m_storageHandle, m_keyChain, m_scheduler, m_validator, config.clusterPrefix, config.clusterSize)
   , m_watchHandle(m_face, m_storageHandle, m_keyChain, m_scheduler, m_validator)
   , m_deleteHandle(m_face, m_storageHandle, m_keyChain, m_scheduler, m_validator)
-  , m_manifestHandle(m_face, m_storageHandle, m_keyChain, m_scheduler, m_validator)
+  , m_manifestHandle(m_face, m_storageHandle, m_keyChain, m_scheduler, m_validator, config.clusterPrefix)
   , m_tcpBulkInsertHandle(ioService, m_storageHandle)
 
 {

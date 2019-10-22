@@ -207,7 +207,10 @@ WriteHandle::writeManifest(ProcessId processId, const Interest& interest)
   std::cout << "Using repo: " << manifestRepo << std::endl;
 
   RepoCommandParameter parameters;
-  parameters.setName(name);
+  auto commandName = m_selfRepo;
+  commandName.append(name);
+  parameters.setName(commandName);
+
   parameters.setProcessId(processId);
   Interest createInterest = util::generateCommandInterest(
       manifestRepo, "create", parameters, m_interestLifetime);
@@ -259,6 +262,8 @@ WriteHandle::listen(const Name& prefix)
   getFace().setInterestFilter(
     Name(prefix).append("info"),
     bind(&WriteHandle::onInfoInterest, this, _1, _2));
+
+  m_selfRepo = prefix.getSubName(prefix.size() - 1, prefix.size());
 }
 
 void

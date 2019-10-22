@@ -256,6 +256,8 @@ private:
   ndn::time::milliseconds m_noEndTimeout;
   ndn::time::milliseconds m_interestLifetime;
 
+  ndn::Name m_selfRepo;
+
   ndn::Name m_clusterPrefix;
   int m_clusterSize;
 };

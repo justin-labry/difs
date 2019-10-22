@@ -49,10 +49,11 @@ ReadHandle::connectAutoListen()
 void
 ReadHandle::onInterest(const Name& prefix, const Interest& interest)
 {
-  shared_ptr<ndn::Data> data = getStorageHandle().readData(interest);
-  if (data != nullptr) {
-      getFace().put(*data);
-  }
+  // TODO: Implement to return manifest
+  /* shared_ptr<ndn::Data> data = getStorageHandle().readData(interest); */
+  /* if (data != nullptr) { */
+  /*     getFace().put(*data); */
+  /* } */
 }
 
 void
