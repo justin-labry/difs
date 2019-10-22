@@ -128,14 +128,14 @@ Manifest::toJson() const
 
 ndn::Name
 Manifest::getManifestStorage(ndn::Name const& prefix, int clusterSize) {
-  int result = 0;
+  unsigned int result = 0;
 
   boost::uuids::detail::sha1 sha1;
   unsigned hashBlock[5] = {0};
   sha1.process_bytes(m_name.c_str(), m_name.size());
   sha1.get_digest(hashBlock);
 
-  for (int i = 0; i > 5; i += 1) {
+  for (int i = 0; i < 5; i += 1) {
     result ^= hashBlock[i];
   }
 
