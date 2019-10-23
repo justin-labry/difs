@@ -11,12 +11,12 @@
 namespace repo {
 
 std::string
-Manifest::makeHash() const
+Manifest::getHash(const std::string name)
 {
   std::string result;
   boost::uuids::detail::sha1 sha1;
   unsigned hashBlock[5] = {0};
-  sha1.process_bytes(m_name.c_str(), m_name.size());
+  sha1.process_bytes(name.c_str(), name.size());
   sha1.get_digest(hashBlock);
 
   for (int i = 0; i < 5; i += 1) {
@@ -24,6 +24,32 @@ Manifest::makeHash() const
   }
 
   return result;
+}
+
+ndn::Name
+Manifest::getManifestStorage(
+    ndn::Name const& prefix,
+    const std::string name,
+    unsigned int clusterSize)
+{
+  unsigned int result = 0;
+
+  boost::uuids::detail::sha1 sha1;
+  unsigned hashBlock[5] = {0};
+  sha1.process_bytes(name.c_str(), name.size());
+  sha1.get_digest(hashBlock);
+
+  for (int i = 0; i < 5; i += 1) {
+    result ^= hashBlock[i];
+  }
+
+  return ndn::Name(prefix).append(std::to_string(result % clusterSize));
+}
+
+std::string
+Manifest::makeHash() const
+{
+  return getHash(m_name);
 }
 
 Manifest
@@ -128,18 +154,7 @@ Manifest::toJson() const
 
 ndn::Name
 Manifest::getManifestStorage(ndn::Name const& prefix, int clusterSize) {
-  unsigned int result = 0;
-
-  boost::uuids::detail::sha1 sha1;
-  unsigned hashBlock[5] = {0};
-  sha1.process_bytes(m_name.c_str(), m_name.size());
-  sha1.get_digest(hashBlock);
-
-  for (int i = 0; i < 5; i += 1) {
-    result ^= hashBlock[i];
-  }
-
-  return ndn::Name(prefix).append(std::to_string(result % clusterSize));
+  return getManifestStorage(prefix, m_name, clusterSize);
 }
 
 std::list<Manifest::Repo>

@@ -38,7 +38,9 @@ public:
   };
 
   ReadHandle(Face& face, RepoStorage& storageHandle, KeyChain& keyChain,
-             Scheduler& scheduler, size_t prefixSubsetLength);
+             Scheduler& scheduler, size_t prefixSubsetLength,
+             ndn::Name const& clusterPrefix,
+             int clusterSize);
 
   void
   listen(const Name& prefix) override;
@@ -66,6 +68,22 @@ PUBLIC_WITH_TESTS_ELSE_PRIVATE:
   connectAutoListen();
 
 private:
+  struct ProcessInfo
+  {
+    Interest interest; // requested from ndngetfile. Save it for later reply
+
+    /**
+     * @brief the latest time point at which EndBlockId must be determined
+     *
+     * Segmented fetch process will terminate if EndBlockId cannot be
+     * determined before this time point.
+     * It is initialized to now()+noEndTimeout when segmented fetch process begins,
+     * and reset to now()+noEndTimeout each time an insert status check command is processed.
+     */
+    ndn::time::steady_clock::TimePoint noEndTime;
+  };
+
+private:
   /**
    * @brief Read data from backend storage
    */
@@ -75,11 +93,24 @@ private:
   void
   onRegisterFailed(const Name& prefix, const std::string& reason);
 
+  void
+  onFindCommandResponse(const Interest& interest, const Data& data, ProcessId processId);
+
+  void
+  onFindCommandTimeout(const Interest& interest, ProcessId processId);
+
 private:
   size_t m_prefixSubsetLength;
   std::map<ndn::Name, RegisteredDataPrefix> m_insertedDataPrefixes;
   ndn::util::signal::ScopedConnection afterDataDeletionConnection;
   ndn::util::signal::ScopedConnection afterDataInsertionConnection;
+
+  ndn::time::milliseconds m_interestLifetime;
+
+  std::map<ProcessId, ProcessInfo> m_processes;
+
+  ndn::Name m_clusterPrefix;
+  int m_clusterSize;
 };
 
 } // namespace repo

@@ -19,13 +19,21 @@
 
 #include "read-handle.hpp"
 #include "repo.hpp"
+#include "util.hpp"
+#include "../manifest/manifest.hpp"
 
 namespace repo {
 
+static const milliseconds DEFAULT_INTEREST_LIFETIME(4000);
+
 ReadHandle::ReadHandle(Face& face, RepoStorage& storageHandle, KeyChain& keyChain,
-                       Scheduler& scheduler, size_t prefixSubsetLength)
+                       Scheduler& scheduler, size_t prefixSubsetLength,
+                       ndn::Name const& clusterPrefix, int clusterSize)
   : BaseHandle(face, storageHandle, keyChain, scheduler)
   , m_prefixSubsetLength(prefixSubsetLength)
+  , m_interestLifetime(DEFAULT_INTEREST_LIFETIME)
+  , m_clusterPrefix(clusterPrefix)
+  , m_clusterSize(clusterSize)
 {
   connectAutoListen();
 }
@@ -49,11 +57,52 @@ ReadHandle::connectAutoListen()
 void
 ReadHandle::onInterest(const Name& prefix, const Interest& interest)
 {
+
+  auto name = interest.getName().toUri();
+  std::cout << "Received read interest: " << name << std::endl;
+  // FIXME: name will be sent already hashed form
+  auto hash = Manifest::getHash(name);
+  auto repo = Manifest::getManifestStorage(m_clusterPrefix, name, m_clusterSize);
+
+  std::cout << "Find " << hash << " using repo " << repo << std::endl;
   // TODO: Implement to return manifest
-  /* shared_ptr<ndn::Data> data = getStorageHandle().readData(interest); */
-  /* if (data != nullptr) { */
-  /*     getFace().put(*data); */
-  /* } */
+
+  ProcessId processId = generateProcessId();
+
+  auto process = m_processes[processId];
+  process.interest = interest;
+
+  RepoCommandParameter parameters;
+  parameters.setName(hash);
+
+  parameters.setProcessId(processId);
+  Interest findInterest = util::generateCommandInterest(
+    repo, "find", parameters, m_interestLifetime);
+
+  std::cout << "Send interest(" << processId << "): " << findInterest << std::endl;
+
+  getFace().expressInterest(
+      findInterest,
+      bind(&ReadHandle::onFindCommandResponse, this, _1, _2, processId),
+      bind(&ReadHandle::onFindCommandTimeout, this, _1, processId), // Nack
+      bind(&ReadHandle::onFindCommandTimeout, this, _1, processId));
+}
+
+void
+ReadHandle::onFindCommandResponse(const Interest& interest, const Data& data, ProcessId processId)
+{
+  auto process = m_processes[processId];
+  std::cout << "Got find command response " << processId << " " << interest.getName();
+  Data responseData(process.interest.getName());
+  responseData.setContent(data.getContent());
+  getFace().put(responseData);
+  m_processes.erase(processId);
+}
+
+void
+ReadHandle::onFindCommandTimeout(const Interest& interest, ProcessId processId)
+{
+  m_processes.erase(processId);
 }
 
 void

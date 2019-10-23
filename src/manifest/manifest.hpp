@@ -24,6 +24,15 @@ public:
 
 public:
 
+  static std::string
+  getHash(const std::string name);
+
+  static ndn::Name
+  getManifestStorage(
+    ndn::Name const& prefix,
+    const std::string name,
+    unsigned int clusterSize);
+
   std::string
   toJson() const;
 
