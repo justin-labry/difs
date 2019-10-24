@@ -115,6 +115,10 @@ private: // insert command
   void
   onValidationFailed(const Interest& interest, const ValidationError& error);
 
+private:
+  void
+  onFindInterest(const Name& prefix, const Interest& interest);
+
 private: // single data fetching
   /**
    * @brief fetch one data

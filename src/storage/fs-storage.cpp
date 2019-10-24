@@ -104,6 +104,12 @@ FsStorage::insertManifest(const Manifest& manifest)
   return manifest.getHash();
 }
 
+Manifest
+FsStorage::readManifest(const std::string hash)
+{
+  return Manifest("ccc", 0, 0);
+}
+
 int64_t
 FsStorage::writeData(const Data& data, const char* dataType)
 {

@@ -73,6 +73,9 @@ public :
   virtual std::string
   insertManifest(const Manifest& data) = 0;
 
+  virtual Manifest
+  readManifest(const std::string hash) = 0;
+
   /**
    *  @brief  remove the entry in the database by using full name
    *  @param  full name full name of entry in the database

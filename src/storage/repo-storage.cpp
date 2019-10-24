@@ -80,6 +80,14 @@ RepoStorage::insertManifest(const Manifest& manifest)
   return didInsert;
 }
 
+Manifest
+RepoStorage::readManifest(const std::string& hash)
+{
+  std::cout << "Read Manifest: " << hash << std::endl;
+  Manifest manifest = m_storage.readManifest(hash);
+  return manifest;
+}
+
 ssize_t
 RepoStorage::deleteData(const Name& name)
 {

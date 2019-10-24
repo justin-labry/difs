@@ -210,6 +210,10 @@ ManifestHandle::listen(const Name& prefix)
   getFace().setInterestFilter(
     Name(prefix).append("create"),
     bind(&ManifestHandle::onCreateInterest, this, _1, _2));
+
+  getFace().setInterestFilter(
+    Name(prefix).append("find"),
+    bind(&ManifestHandle::onFindInterest, this, _1, _2));
 }
 
 void
@@ -549,6 +553,27 @@ ManifestHandle::processSegmentedInsertCommand(const Interest& interest,
 
     segInit(processId, parameter);
   }
+}
+
+void
+ManifestHandle::onFindInterest(const Name& prefix, const Interest& interest)
+{
+  RepoCommandParameter parameter;
+  try {
+    extractParameter(interest, prefix, parameter);
+  }
+  catch (RepoCommandParameter::Error) {
+    negativeReply(interest, 403);
+    return;
+  }
+
+  auto hash = parameter.getName().toUri();
+  hash = hash.substr(1, hash.length() - 1);
+  std::cout << "got find interest: " << hash << std::endl;
+
+  auto manifest = getStorageHandle().readManifest(hash);
+
+  reply(interest, manifest.toJson());
 }
 
 void

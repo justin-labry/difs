@@ -72,6 +72,12 @@ public:
   insertManifest(const Manifest& manifest);
 
   /**
+   * @brief read manifest from repo
+   */
+  Manifest
+  readManifest(const std::string& hash);
+
+  /**
    *  @brief   delete data from repo
    *  @param   name     used to find entry needed to be erased in repo
    *  @return  if deletion in either index or database fail, return -1,

@@ -37,6 +37,9 @@ public:
   virtual std::string
   insertManifest(const Manifest& data);
 
+  virtual Manifest
+  readManifest(const std::string hash);
+
   virtual bool
   erase(const Name& name);
 
