@@ -95,6 +95,8 @@ private:
     int startBlockId;
     int endBlockId;
 
+    bool manifestSent = false;
+
     /**
      * @brief the latest time point at which EndBlockId must be determined
      *

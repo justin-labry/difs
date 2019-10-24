@@ -184,6 +184,8 @@ WriteHandle::onSegmentDataValidated(const Interest& interest, const Data& data, 
     response.setInsertNum(response.getInsertNum() + 1);
   }
 
+  extendNoEndTime(process);
+
   onSegmentDataControl(processId, interest);
 }
 
@@ -300,6 +302,7 @@ WriteHandle::segInit(ProcessId processId, const RepoCommandParameter& parameter)
     fetchName.appendSegment(segment);
     Interest interest(fetchName);
     interest.setInterestLifetime(m_interestLifetime);
+    interest.setMustBeFresh(true);
     getFace().expressInterest(interest,
                               bind(&WriteHandle::onSegmentData, this, _1, _2, processId),
                               bind(&WriteHandle::onSegmentTimeout, this, _1, processId), // Nack
@@ -395,6 +398,7 @@ WriteHandle::onSegmentDataControl(ProcessId processId, const Interest& interest)
   fetchName.appendSegment(sendingSegment);
   Interest fetchInterest(fetchName);
   fetchInterest.setInterestLifetime(m_interestLifetime);
+  fetchInterest.setMustBeFresh(true);
   getFace().expressInterest(fetchInterest,
                             bind(&WriteHandle::onSegmentData, this, _1, _2, processId),
                             bind(&WriteHandle::onSegmentTimeout, this, _1, processId), // Nack
@@ -501,7 +505,10 @@ WriteHandle::onCheckValidated(const Interest& interest, const Name& prefix)
     return;
   }
 
-  writeManifest(processId, interest);
+  if (! process.manifestSent) {
+    process.manifestSent = true;
+    writeManifest(processId, interest);
+  }
 
   //read if noEndtimeout
   if (!response.hasEndBlockId()) {
@@ -550,6 +557,7 @@ WriteHandle::processSingleInsertCommand(const Interest& interest,
   if (parameter.hasSelectors()) {
     fetchInterest.setSelectors(parameter.getSelectors());
   }
+  fetchInterest.setMustBeFresh(true);
   getFace().expressInterest(fetchInterest,
                             bind(&WriteHandle::onData, this, _1, _2, processId),
                             bind(&WriteHandle::onTimeout, this, _1, processId), // Nack

@@ -129,7 +129,6 @@ ManifestHandle::onDataValidated(const Interest& interest, const Data& data, Proc
         content.value(),
         content.value() + content.value_size()
         );
-    std::cout << "Data: " << json << std::endl;
 
     Manifest manifest = Manifest::fromJson(json);
 
@@ -572,8 +571,9 @@ ManifestHandle::onFindInterest(const Name& prefix, const Interest& interest)
   std::cout << "got find interest: " << hash << std::endl;
 
   auto manifest = getStorageHandle().readManifest(hash);
-
-  reply(interest, manifest.toJson());
+  if (!manifest.getName().empty()) {
+    reply(interest, manifest.toJson());
+  }
 }
 
 void

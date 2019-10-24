@@ -57,7 +57,6 @@ ReadHandle::connectAutoListen()
 void
 ReadHandle::onInterest(const Name& prefix, const Interest& interest)
 {
-
   auto name = interest.getName().toUri();
   std::cout << "Received read interest: " << name << std::endl;
   // FIXME: name will be sent already hashed form
@@ -115,8 +114,7 @@ ReadHandle::onRegisterFailed(const Name& prefix, const std::string& reason)
 void
 ReadHandle::listen(const Name& prefix)
 {
-  ndn::InterestFilter filter(prefix);
-  getFace().setInterestFilter(filter,
+  getFace().setInterestFilter(Name(prefix).append("get"),
                               bind(&ReadHandle::onInterest, this, _1, _2),
                               bind(&ReadHandle::onRegisterFailed, this, _1, _2));
 }
@@ -139,6 +137,9 @@ ReadHandle::onDataDeleted(const Name& name)
 void
 ReadHandle::onDataInserted(const Name& name)
 {
+
+  // XXX: Unnecessary
+  return;
   // Note: We want to save the prefix that we register exactly, not the
   // name that provoked the registration
   Name prefixToRegister = name.getPrefix(-m_prefixSubsetLength);

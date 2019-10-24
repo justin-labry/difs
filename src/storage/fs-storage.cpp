@@ -89,9 +89,6 @@ FsStorage::insert(const Data& data)
 std::string
 FsStorage::insertManifest(const Manifest& manifest)
 {
-  // FIXME: Use id from hash
-  // return writeData(data, DIRNAME_MANIFEST);
-  std::cout << "Inserting manifest" << manifest.toJson() << std::endl;
   boost::filesystem::path fsPath = m_path / DIRNAME_MANIFEST / manifest.getHash();
 
   auto json = manifest.toJson();
