@@ -112,6 +112,8 @@ Manifest::fromJson(std::string json)
     int start = item.second.get<int>("segment.start");
     int end = item.second.get<int>("segment.end");
 
+    std::cout << "REPO: " << repoName << "(" << start << ", " << end << ")" << std::endl;
+
     manifest.appendRepo(repoName, start, end);
   }
 

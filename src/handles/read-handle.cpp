@@ -57,7 +57,21 @@ ReadHandle::connectAutoListen()
 void
 ReadHandle::onInterest(const Name& prefix, const Interest& interest)
 {
-  auto name = interest.getName().toUri();
+  // FIXME: Implement it
+}
+
+void
+ReadHandle::onGetInterest(const Name& prefix, const Interest& interest)
+{
+  RepoCommandParameter parameter;
+  try {
+    extractParameter(interest, prefix, parameter);
+  }
+  catch (RepoCommandParameter::Error) {
+    negativeReply(interest, 403);
+    return;
+  }
+  auto name = parameter.getName().toUri();
   std::cout << "Received read interest: " << name << std::endl;
   // FIXME: name will be sent already hashed form
   auto hash = Manifest::getHash(name);
@@ -68,8 +82,10 @@ ReadHandle::onInterest(const Name& prefix, const Interest& interest)
 
   ProcessId processId = generateProcessId();
 
-  auto process = m_processes[processId];
+  ProcessInfo& process = m_processes[processId];
   process.interest = interest;
+
+  std::cout << "Saving interest: " << processId << " " << interest << std::endl;
 
   RepoCommandParameter parameters;
   parameters.setName(hash);
@@ -77,6 +93,7 @@ ReadHandle::onInterest(const Name& prefix, const Interest& interest)
   parameters.setProcessId(processId);
   Interest findInterest = util::generateCommandInterest(
     repo, "find", parameters, m_interestLifetime);
+  findInterest.setMustBeFresh(true);
 
   std::cout << "Send interest(" << processId << "): " << findInterest << std::endl;
 
@@ -91,10 +108,14 @@ void
 ReadHandle::onFindCommandResponse(const Interest& interest, const Data& data, ProcessId processId)
 {
   auto process = m_processes[processId];
-  std::cout << "Got find command response " << processId << " " << interest.getName();
+  std::cout << "Got find command response " << processId << " " << interest.getName() << std::endl;
   Data responseData(process.interest.getName());
-  responseData.setContent(data.getContent());
-  getFace().put(responseData);
+  auto content = data.getContent();
+  std::string json(
+      content.value(),
+      content.value() + content.value_size()
+      );
+  reply(process.interest, json);
   m_processes.erase(processId);
 }
 
@@ -114,8 +135,11 @@ ReadHandle::onRegisterFailed(const Name& prefix, const std::string& reason)
 void
 ReadHandle::listen(const Name& prefix)
 {
-  getFace().setInterestFilter(Name(prefix).append("get"),
+  getFace().setInterestFilter(prefix,
                               bind(&ReadHandle::onInterest, this, _1, _2),
+                              bind(&ReadHandle::onRegisterFailed, this, _1, _2));
+  getFace().setInterestFilter(Name("get"),
+                              bind(&ReadHandle::onGetInterest, this, _1, _2),
                               bind(&ReadHandle::onRegisterFailed, this, _1, _2));
 }
 
@@ -137,37 +161,16 @@ ReadHandle::onDataDeleted(const Name& name)
 void
 ReadHandle::onDataInserted(const Name& name)
 {
-
   // XXX: Unnecessary
   return;
-  // Note: We want to save the prefix that we register exactly, not the
-  // name that provoked the registration
-  Name prefixToRegister = name.getPrefix(-m_prefixSubsetLength);
-  ndn::InterestFilter filter(prefixToRegister);
-  auto check = m_insertedDataPrefixes.find(prefixToRegister);
-  if (check == m_insertedDataPrefixes.end()) {
-    // Because of stack lifetime problems, we assume here that the
-    // prefix registration will be successful, and we add the registered
-    // prefix to our list. This is because, if we fail, we shut
-    // everything down, anyway. If registration failures are ever
-    // considered to be recoverable, we would need to make this
-    // atomic.
-    const ndn::RegisteredPrefixId* prefixId = getFace().setInterestFilter(filter,
-      [this] (const ndn::InterestFilter& filter, const Interest& interest) {
-        // Implicit conversion to Name of filter
-        onInterest(filter, interest);
-      },
-      [] (const Name&) {},
-      [this] (const Name& prefix, const std::string& reason) {
-        onRegisterFailed(prefix, reason);
-      });
-    RegisteredDataPrefix registeredPrefix{prefixId, 1};
-    // Newly registered prefix
-    m_insertedDataPrefixes.emplace(std::make_pair(prefixToRegister, registeredPrefix));
-  }
-  else {
-    check->second.useCount++;
-  }
+}
+
+void
+ReadHandle::negativeReply(const Interest& interest, int statusCode)
+{
+  RepoCommandResponse response;
+  response.setStatusCode(statusCode);
+  reply(interest, response);
 }
 
 } // namespace repo

@@ -572,7 +572,8 @@ ManifestHandle::onFindInterest(const Name& prefix, const Interest& interest)
 
   auto manifest = getStorageHandle().readManifest(hash);
   if (!manifest.getName().empty()) {
-    reply(interest, manifest.toJson());
+    auto json = manifest.toJson();
+    reply(interest, json);
   }
 }
 

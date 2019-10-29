@@ -104,7 +104,14 @@ FsStorage::insertManifest(const Manifest& manifest)
 Manifest
 FsStorage::readManifest(const std::string hash)
 {
-  return Manifest("ccc", 0, 0);
+  boost::filesystem::path fsPath = m_path / DIRNAME_MANIFEST / hash;
+  boost::filesystem::ifstream inFileData(fsPath);
+
+  std::string json(
+      (std::istreambuf_iterator<char>(inFileData)),
+      std::istreambuf_iterator<char>());
+
+  return Manifest::fromJson(json);
 }
 
 int64_t

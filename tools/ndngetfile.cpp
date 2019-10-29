@@ -24,6 +24,12 @@
 
 #include <boost/lexical_cast.hpp>
 
+#include "../src/manifest/manifest.cpp"
+#include "../src/util.cpp"
+
+#include "../src/repo-command-parameter.hpp"
+#include "../src/repo-command-response.hpp"
+
 namespace repo {
 
 using ndn::Name;
@@ -43,21 +49,12 @@ Consumer::fetchData(const Name& name)
   Interest interest(name);
   interest.setInterestLifetime(m_interestLifetime);
   //std::cout<<"interest name = "<<interest.getName()<<std::endl;
-  if (m_hasVersion)
-    {
-      interest.setMustBeFresh(m_mustBeFresh);
-    }
-  else
-    {
-      interest.setMustBeFresh(true);
-      interest.setChildSelector(1);
-    }
+  interest.setMustBeFresh(true);
+  interest.setChildSelector(1);
 
+  std::cout << "Fetch: " << interest.getName() << std::endl;
   m_face.expressInterest(interest,
-                         m_hasVersion ?
-                         bind(&Consumer::onVersionedData, this, _1, _2)
-                         :
-                         bind(&Consumer::onUnversionedData, this, _1, _2),
+                         bind(&Consumer::onVersionedData, this, _1, _2),
                          bind(&Consumer::onTimeout, this, _1), // Nack
                          bind(&Consumer::onTimeout, this, _1));
 }
@@ -65,6 +62,18 @@ Consumer::fetchData(const Name& name)
 void
 Consumer::run()
 {
+  // Get Manifest
+  RepoCommandParameter parameter;
+  parameter.setName(m_dataName);
+  Interest interest = util::generateCommandInterest(Name("get"), "", parameter, m_interestLifetime);
+
+  std::cout << "Express: " << interest.getName() << std::endl;
+  m_face.expressInterest(
+      interest,
+      bind(&Consumer::onManifest, this, _1, _2),
+      bind(&Consumer::onTimeout, this, _1),
+      bind(&Consumer::onTimeout, this, _1));
+
   // Send the first Interest
   Name name(m_dataName);
 
@@ -76,35 +85,38 @@ Consumer::run()
 }
 
 void
+Consumer::onManifest(const Interest& interest, const Data& data)
+{
+  auto content = data.getContent();
+  std::string json(
+      content.value(),
+      content.value() + content.value_size()
+      );
+  std::cout << "Got Manifest: " << json << std::endl;
+}
+
+void
 Consumer::onVersionedData(const Interest& interest, const Data& data)
 {
   const Name& name = data.getName();
 
   // the received data name may have segment number or not
   if (name.size() == m_dataName.size()) {
-    if (!m_isSingle) {
-      Name fetchName = name;
-      fetchName.appendSegment(0);
-      fetchData(fetchName);
-    }
+     Name fetchName = name;
+     fetchName.appendSegment(0);
+     fetchData(fetchName);
   }
   else if (name.size() == m_dataName.size() + 1) {
-    if (!m_isSingle) {
-      if (m_isFirst) {
-        uint64_t segment = name[-1].toSegment();
-        if (segment != 0) {
-          fetchData(Name(m_dataName).appendSegment(0));
-          m_isFirst = false;
-          return;
-        }
+    if (m_isFirst) {
+      uint64_t segment = name[-1].toSegment();
+      if (segment != 0) {
+        fetchData(Name(m_dataName).appendSegment(0));
         m_isFirst = false;
+        return;
       }
-      fetchNextData(name, data);
+      m_isFirst = false;
     }
-    else {
-      std::cerr << "ERROR: Data is not stored in a single packet" << std::endl;
-      return;
-    }
+    fetchNextData(name, data);
   }
   else {
     std::cerr << "ERROR: Name size does not match" << std::endl;
@@ -119,29 +131,21 @@ Consumer::onUnversionedData(const Interest& interest, const Data& data)
   const Name& name = data.getName();
   //std::cout<<"recevied data name = "<<name<<std::endl;
   if (name.size() == m_dataName.size() + 1) {
-    if (!m_isSingle) {
-      Name fetchName = name;
-      fetchName.append(name[-1]).appendSegment(0);
-      fetchData(fetchName);
-    }
+    Name fetchName = name;
+    fetchName.append(name[-1]).appendSegment(0);
+    fetchData(fetchName);
   }
   else if (name.size() == m_dataName.size() + 2) {
-    if (!m_isSingle) {
-       if (m_isFirst) {
-        uint64_t segment = name[-1].toSegment();
-        if (segment != 0) {
-          fetchData(Name(m_dataName).append(name[-2]).appendSegment(0));
-          m_isFirst = false;
-          return;
-        }
+    if (m_isFirst) {
+      uint64_t segment = name[-1].toSegment();
+      if (segment != 0) {
+        fetchData(Name(m_dataName).append(name[-2]).appendSegment(0));
         m_isFirst = false;
+        return;
       }
-      fetchNextData(name, data);
+      m_isFirst = false;
     }
-    else {
-      std::cerr << "ERROR: Data is not stored in a single packet" << std::endl;
-      return;
-    }
+    fetchNextData(name, data);
   }
   else {
     std::cerr << "ERROR: Name size does not match" << std::endl;
@@ -160,7 +164,7 @@ Consumer::readData(const Data& data)
   {
     std::cerr << "LOG: received data = " << data.getName() << std::endl;
   }
-  if (m_isFinished || m_isSingle) {
+  if (m_isFinished) {
     std::cerr << "INFO: End of file is reached." << std::endl;
     std::cerr << "INFO: Total # of segments received: " << m_nextSegment  << std::endl;
     std::cerr << "INFO: Total # bytes of content received: " << m_totalSize << std::endl;
@@ -180,10 +184,7 @@ Consumer::fetchNextData(const Name& name, const Data& data)
   {
     // Reset retry counter
     m_retryCount = 0;
-    if (m_hasVersion)
-      fetchData(Name(m_dataName).appendSegment(m_nextSegment++));
-    else
-      fetchData(Name(m_dataName).append(name[-2]).appendSegment(m_nextSegment++));
+    fetchData(Name(m_dataName).append(name[-2]).appendSegment(m_nextSegment++));
   }
 }
 
@@ -308,8 +309,7 @@ main(int argc, char** argv)
 
   std::ostream os(buf);
 
-  Consumer consumer(name, os, verbose, versioned, single,
-                    interestLifetime, timeout);
+  Consumer consumer(name, os, verbose, interestLifetime, timeout);
 
   try
     {

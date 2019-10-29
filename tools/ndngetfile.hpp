@@ -28,14 +28,12 @@ class Consumer : boost::noncopyable
 {
 public:
   Consumer(const std::string& dataName, std::ostream& os,
-           bool verbose, bool versioned, bool single,
+           bool verbose,
            int interestLifetime, int timeout,
            bool mustBeFresh = false)
     : m_dataName(dataName)
     , m_os(os)
     , m_verbose(verbose)
-    , m_hasVersion(versioned)
-    , m_isSingle(single)
     , m_isFinished(false)
     , m_isFirst(true)
     , m_interestLifetime(interestLifetime)
@@ -55,6 +53,9 @@ private:
   fetchData(const ndn::Name& name);
 
   void
+  onManifest(const ndn::Interest& interest, const ndn::Data& data);
+
+  void
   onVersionedData(const ndn::Interest& interest, const ndn::Data& data);
 
   void
@@ -72,11 +73,10 @@ private:
 private:
 
   ndn::Face m_face;
-  ndn::Name m_dataName;
+  ndn::Name m_dataName;  // /example/data/1
+  ndn::Name m_locationName;  // /storage0/example/data/1
   std::ostream& m_os;
   bool m_verbose;
-  bool m_hasVersion;
-  bool m_isSingle;
   bool m_isFinished;
   bool m_isFirst;
   ndn::time::milliseconds m_interestLifetime;

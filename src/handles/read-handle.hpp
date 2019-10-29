@@ -91,6 +91,9 @@ private:
   onInterest(const Name& prefix, const Interest& interest);
 
   void
+  onGetInterest(const Name& prefix, const Interest& interest);
+
+  void
   onRegisterFailed(const Name& prefix, const std::string& reason);
 
   void
@@ -98,6 +101,9 @@ private:
 
   void
   onFindCommandTimeout(const Interest& interest, ProcessId processId);
+
+  void
+  negativeReply(const Interest& interest, int statusCode);
 
 private:
   size_t m_prefixSubsetLength;

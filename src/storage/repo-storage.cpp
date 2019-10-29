@@ -39,30 +39,31 @@ void
 RepoStorage::initialize()
 {
   NDN_LOG_DEBUG("Initialize");
-  m_storage.fullEnumerate(bind(&RepoStorage::insertItemToIndex, this, _1));
+  /* m_storage.fullEnumerate(bind(&RepoStorage::insertItemToIndex, this, _1)); */
 }
 
 void
 RepoStorage::insertItemToIndex(const Storage::ItemMeta& item)
 {
   NDN_LOG_DEBUG("Insert data to index " << item.fullName);
-  m_index.insert(item.fullName, item.id, item.keyLocatorHash);
+  /* m_index.insert(item.fullName, item.id, item.keyLocatorHash); */
   afterDataInsertion(item.fullName);
 }
 
 bool
 RepoStorage::insertData(const Data& data)
 {
-   bool isExist = m_index.hasData(data);
-   if (isExist)
-     BOOST_THROW_EXCEPTION(Error("The Entry Has Already In the Skiplist. Cannot be Inserted!"));
+   /* bool isExist = m_index.hasData(data); */
+   /* if (isExist) */
+   /*   BOOST_THROW_EXCEPTION(Error("The Entry Has Already In the Skiplist. Cannot be Inserted!")); */
    int64_t id = m_storage.insert(data);
    if (id == -1)
      return false;
-   bool didInsert = m_index.insert(data, id);
-   if (didInsert)
-     afterDataInsertion(data.getName());
-   return didInsert;
+   /* bool didInsert = m_index.insert(data, id); */
+   /* if (didInsert) */
+   /*   afterDataInsertion(data.getName()); */
+   /* return didInsert; */
+   return true;
 }
 
 bool
