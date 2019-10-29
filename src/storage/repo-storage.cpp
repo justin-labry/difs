@@ -142,14 +142,11 @@ RepoStorage::deleteData(const Interest& interest)
 }
 
 shared_ptr<Data>
-RepoStorage::readData(const Interest& interest) const
+RepoStorage::readData(const ndn::Name& name) const
 {
-  std::pair<int64_t,ndn::Name> idName = m_index.find(interest);
-  if (idName.first != 0) {
-    shared_ptr<Data> data = m_storage.read(idName.second);
-    if (data) {
-      return data;
-    }
+  shared_ptr<Data> data = m_storage.read(name);
+  if (data) {
+    return data;
   }
   return shared_ptr<Data>();
 }

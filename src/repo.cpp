@@ -145,10 +145,10 @@ Repo::initializeStorage()
 void
 Repo::enableListening()
 {
-  for (const ndn::Name& dataPrefix : m_config.dataPrefixes) {
-    // ReadHandle performs prefix registration internally.
-    m_readHandle.listen(dataPrefix);
-  }
+  /* for (const ndn::Name& dataPrefix : m_config.dataPrefixes) { */
+  /*   // ReadHandle performs prefix registration internally. */
+  /*   m_readHandle.listen(cmdPrefix + dataPrefix); */
+  /* } */
   for (const ndn::Name& cmdPrefix : m_config.repoPrefixes) {
     m_face.registerPrefix(cmdPrefix, nullptr,
       [] (const Name& cmdPrefix, const std::string& reason) {
@@ -156,6 +156,7 @@ Repo::enableListening()
         BOOST_THROW_EXCEPTION(Error("Command prefix registration failed"));
       });
 
+    m_readHandle.listen(cmdPrefix);
     m_writeHandle.listen(cmdPrefix);
     m_watchHandle.listen(cmdPrefix);
     m_deleteHandle.listen(cmdPrefix);

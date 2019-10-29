@@ -91,6 +91,9 @@ protected:
   reply(const Interest& commandInterest, const RepoCommandResponse& response);
 
   void
+  reply(const Interest& commandInterest, shared_ptr<ndn::Data> data);
+
+  void
   reply(const Interest& commandInterest, const std::string data);
 
   ndn::Data
@@ -122,6 +125,15 @@ BaseHandle::reply(const Interest& commandInterest, const RepoCommandResponse& re
 {
   std::shared_ptr<Data> rdata = std::make_shared<Data>(commandInterest.getName());
   rdata->setContent(response.wireEncode());
+  m_keyChain.sign(*rdata);
+  m_face.put(*rdata);
+}
+
+inline void
+BaseHandle::reply(const Interest& commandInterest, shared_ptr<ndn::Data> data)
+{
+  std::shared_ptr<Data> rdata = std::make_shared<Data>(*data);
+  rdata->setName(commandInterest.getName());
   m_keyChain.sign(*rdata);
   m_face.put(*rdata);
 }

@@ -112,8 +112,6 @@ Manifest::fromJson(std::string json)
     int start = item.second.get<int>("segment.start");
     int end = item.second.get<int>("segment.end");
 
-    std::cout << "REPO: " << repoName << "(" << start << ", " << end << ")" << std::endl;
-
     manifest.appendRepo(repoName, start, end);
   }
 
@@ -160,7 +158,7 @@ Manifest::getManifestStorage(ndn::Name const& prefix, int clusterSize) {
 }
 
 std::list<Manifest::Repo>
-Manifest::getRepos()
+Manifest::getRepos() const
 {
   return m_repos;
 }

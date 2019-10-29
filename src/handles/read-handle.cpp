@@ -58,6 +58,15 @@ void
 ReadHandle::onInterest(const Name& prefix, const Interest& interest)
 {
   // FIXME: Implement it
+
+  auto fullName = interest.getName();
+  auto dataName = fullName.getSubName(prefix.size(), fullName.size() - prefix.size());
+
+  shared_ptr<ndn::Data> data = m_storageHandle.readData(dataName);
+  std::cout << "Name: " << data->getName() << std::endl;
+  if (data != nullptr) {
+    reply(interest, data);
+  }
 }
 
 void
@@ -85,8 +94,6 @@ ReadHandle::onGetInterest(const Name& prefix, const Interest& interest)
   ProcessInfo& process = m_processes[processId];
   process.interest = interest;
 
-  std::cout << "Saving interest: " << processId << " " << interest << std::endl;
-
   RepoCommandParameter parameters;
   parameters.setName(hash);
 
@@ -94,8 +101,6 @@ ReadHandle::onGetInterest(const Name& prefix, const Interest& interest)
   Interest findInterest = util::generateCommandInterest(
     repo, "find", parameters, m_interestLifetime);
   findInterest.setMustBeFresh(true);
-
-  std::cout << "Send interest(" << processId << "): " << findInterest << std::endl;
 
   getFace().expressInterest(
       findInterest,
@@ -108,7 +113,6 @@ void
 ReadHandle::onFindCommandResponse(const Interest& interest, const Data& data, ProcessId processId)
 {
   auto process = m_processes[processId];
-  std::cout << "Got find command response " << processId << " " << interest.getName() << std::endl;
   Data responseData(process.interest.getName());
   auto content = data.getContent();
   std::string json(
@@ -135,7 +139,8 @@ ReadHandle::onRegisterFailed(const Name& prefix, const std::string& reason)
 void
 ReadHandle::listen(const Name& prefix)
 {
-  getFace().setInterestFilter(prefix,
+  std::cout << "Listen: " << prefix << std::endl;
+  getFace().setInterestFilter(Name(prefix).append("data"),
                               bind(&ReadHandle::onInterest, this, _1, _2),
                               bind(&ReadHandle::onRegisterFailed, this, _1, _2));
   getFace().setInterestFilter(Name("get"),

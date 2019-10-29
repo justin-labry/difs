@@ -97,11 +97,11 @@ public:
 
   /**
    *  @brief  read data from repo
-   *  @param   interest  used to request data
+   *  @param   name  used to request data
    *  @return  std::shared_ptr<Data>
    */
   std::shared_ptr<Data>
-  readData(const Interest& interest) const;
+  readData(const ndn::Name& name) const;
 
 private:
   void

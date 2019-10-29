@@ -44,19 +44,37 @@ using std::placeholders::_2;
 static const int MAX_RETRY = 3;
 
 void
-Consumer::fetchData(const Name& name)
+Consumer::fetchData(const Manifest& manifest, uint64_t segmentId)
 {
-  Interest interest(name);
+  auto repoName = selectRepoName(manifest, segmentId);
+  auto name = manifest.getName();
+  Interest interest(repoName.append("data").append(name).appendSegment(segmentId));
   interest.setInterestLifetime(m_interestLifetime);
   //std::cout<<"interest name = "<<interest.getName()<<std::endl;
   interest.setMustBeFresh(true);
-  interest.setChildSelector(1);
 
-  std::cout << "Fetch: " << interest.getName() << std::endl;
   m_face.expressInterest(interest,
-                         bind(&Consumer::onVersionedData, this, _1, _2),
+                         bind(&Consumer::onUnversionedData, this, _1, _2),
                          bind(&Consumer::onTimeout, this, _1), // Nack
                          bind(&Consumer::onTimeout, this, _1));
+}
+
+ndn::Name
+Consumer::selectRepoName(const Manifest& manifest, int segmentId)
+{
+  auto repos = manifest.getRepos();
+  for (auto iter = repos.begin(); iter != repos.end(); ++iter)
+  {
+    auto start = iter->start;
+    auto end = iter->end;
+    if (start <= segmentId && segmentId <= end)
+    {
+      return Name(iter->name);
+    }
+  }
+
+  // Should not be here
+  return Name("");
 }
 
 void
@@ -67,18 +85,11 @@ Consumer::run()
   parameter.setName(m_dataName);
   Interest interest = util::generateCommandInterest(Name("get"), "", parameter, m_interestLifetime);
 
-  std::cout << "Express: " << interest.getName() << std::endl;
   m_face.expressInterest(
       interest,
       bind(&Consumer::onManifest, this, _1, _2),
       bind(&Consumer::onTimeout, this, _1),
       bind(&Consumer::onTimeout, this, _1));
-
-  // Send the first Interest
-  Name name(m_dataName);
-
-  m_nextSegment++;
-  fetchData(name);
 
   // processEvents will block until the requested data received or timeout occurs
   m_face.processEvents(m_timeout);
@@ -92,65 +103,23 @@ Consumer::onManifest(const Interest& interest, const Data& data)
       content.value(),
       content.value() + content.value_size()
       );
-  std::cout << "Got Manifest: " << json << std::endl;
-}
+  std::cerr << "Got Manifest: " << json << std::endl;
 
-void
-Consumer::onVersionedData(const Interest& interest, const Data& data)
-{
-  const Name& name = data.getName();
+  auto manifest = Manifest::fromJson(json);
+  m_manifest = manifest;
 
-  // the received data name may have segment number or not
-  if (name.size() == m_dataName.size()) {
-     Name fetchName = name;
-     fetchName.appendSegment(0);
-     fetchData(fetchName);
-  }
-  else if (name.size() == m_dataName.size() + 1) {
-    if (m_isFirst) {
-      uint64_t segment = name[-1].toSegment();
-      if (segment != 0) {
-        fetchData(Name(m_dataName).appendSegment(0));
-        m_isFirst = false;
-        return;
-      }
-      m_isFirst = false;
-    }
-    fetchNextData(name, data);
-  }
-  else {
-    std::cerr << "ERROR: Name size does not match" << std::endl;
-    return;
-  }
-  readData(data);
+  auto end = manifest.getEndBlockId();
+  m_finalBlockId = end;
+
+  std::cerr << "End block id: " << end << std::endl;
+
+  fetchData(manifest, m_currentSegment);
 }
 
 void
 Consumer::onUnversionedData(const Interest& interest, const Data& data)
 {
-  const Name& name = data.getName();
-  //std::cout<<"recevied data name = "<<name<<std::endl;
-  if (name.size() == m_dataName.size() + 1) {
-    Name fetchName = name;
-    fetchName.append(name[-1]).appendSegment(0);
-    fetchData(fetchName);
-  }
-  else if (name.size() == m_dataName.size() + 2) {
-    if (m_isFirst) {
-      uint64_t segment = name[-1].toSegment();
-      if (segment != 0) {
-        fetchData(Name(m_dataName).append(name[-2]).appendSegment(0));
-        m_isFirst = false;
-        return;
-      }
-      m_isFirst = false;
-    }
-    fetchNextData(name, data);
-  }
-  else {
-    std::cerr << "ERROR: Name size does not match" << std::endl;
-    return;
-  }
+  fetchNextData();
   readData(data);
 }
 
@@ -166,25 +135,23 @@ Consumer::readData(const Data& data)
   }
   if (m_isFinished) {
     std::cerr << "INFO: End of file is reached." << std::endl;
-    std::cerr << "INFO: Total # of segments received: " << m_nextSegment  << std::endl;
+    std::cerr << "INFO: Total # of segments received: " << m_currentSegment  << std::endl;
     std::cerr << "INFO: Total # bytes of content received: " << m_totalSize << std::endl;
   }
 }
 
 void
-Consumer::fetchNextData(const Name& name, const Data& data)
+Consumer::fetchNextData()
 {
-  uint64_t segment = name[-1].toSegment();
-  BOOST_ASSERT(segment == (m_nextSegment - 1));
-  const ndn::name::Component& finalBlockId = data.getMetaInfo().getFinalBlockId();
-  if (finalBlockId == name[-1]) {
+  if (m_currentSegment >= m_finalBlockId) {
     m_isFinished = true;
   }
   else
   {
     // Reset retry counter
     m_retryCount = 0;
-    fetchData(Name(m_dataName).append(name[-2]).appendSegment(m_nextSegment++));
+    m_currentSegment += 1;
+    fetchData(m_manifest, m_currentSegment);
   }
 }
 
@@ -194,7 +161,7 @@ Consumer::onTimeout(const Interest& interest)
   if (m_retryCount++ < MAX_RETRY)
     {
       // Retransmit the interest
-      fetchData(interest.getName());
+      fetchData(m_manifest, m_currentSegment);
       if (m_verbose)
         {
           std::cerr << "TIMEOUT: retransmit interest for " << interest.getName() << std::endl;
@@ -202,7 +169,7 @@ Consumer::onTimeout(const Interest& interest)
     }
   else
     {
-      std::cerr << "TIMEOUT: last interest sent for segment #" << (m_nextSegment - 1) << std::endl;
+      std::cerr << "TIMEOUT: last interest sent for segment #" << (m_currentSegment) << std::endl;
       std::cerr << "TIMEOUT: abort fetching after " << MAX_RETRY
                 << " times of retry" << std::endl;
     }

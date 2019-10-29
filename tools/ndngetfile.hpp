@@ -22,6 +22,8 @@
 
 #include <ndn-cxx/face.hpp>
 
+#include "../src/manifest/manifest.hpp"
+
 namespace repo {
 
 class Consumer : boost::noncopyable
@@ -38,10 +40,12 @@ public:
     , m_isFirst(true)
     , m_interestLifetime(interestLifetime)
     , m_timeout(timeout)
-    , m_nextSegment(0)
+    , m_currentSegment(0)
     , m_totalSize(0)
     , m_retryCount(0)
     , m_mustBeFresh(mustBeFresh)
+    , m_manifest("", 0, 0)
+    , m_finalBlockId(0)
   {
   }
 
@@ -50,7 +54,10 @@ public:
 
 private:
   void
-  fetchData(const ndn::Name& name);
+  fetchData(const Manifest& manifest, uint64_t segmentId);
+
+  ndn::Name
+  selectRepoName(const Manifest& manifest, int segmentId);
 
   void
   onManifest(const ndn::Interest& interest, const ndn::Data& data);
@@ -68,7 +75,7 @@ private:
   readData(const ndn::Data& data);
 
   void
-  fetchNextData(const ndn::Name& name, const ndn::Data& data);
+  fetchNextData();
 
 private:
 
@@ -81,10 +88,13 @@ private:
   bool m_isFirst;
   ndn::time::milliseconds m_interestLifetime;
   ndn::time::milliseconds m_timeout;
-  uint64_t m_nextSegment;
+  uint64_t m_currentSegment;
   int m_totalSize;
   int m_retryCount;
   bool m_mustBeFresh;
+
+  Manifest m_manifest;
+  uint64_t m_finalBlockId;
 };
 
 } // namespace repo

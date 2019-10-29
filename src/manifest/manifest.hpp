@@ -49,7 +49,7 @@ public:
   getManifestStorage(ndn::Name const& prefix, int clusterSize);
 
   std::list<Repo>
-  getRepos();
+  getRepos() const;
 
   void
   appendRepo(std::string repoName, int start, int end);
