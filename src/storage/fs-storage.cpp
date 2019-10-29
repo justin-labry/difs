@@ -117,11 +117,11 @@ FsStorage::readManifest(const std::string hash)
 int64_t
 FsStorage::writeData(const Data& data, const char* dataType)
 {
-  auto id = hash(data.getFullName().toUri());
+  auto id = hash(data.getName().toUri());
 
   Index::Entry entry(data, 0);
 
-  boost::filesystem::path fsPath = getPath(data.getFullName(), dataType);
+  boost::filesystem::path fsPath = getPath(data.getName(), dataType);
   boost::filesystem::create_directory(fsPath);
 
   std::ofstream outFileName((fsPath / FNAME_NAME).string(), std::ios::binary);
