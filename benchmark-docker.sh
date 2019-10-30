@@ -18,6 +18,9 @@ prepare() {
   tmux split-pane
   tmux split-pane -h
 
+  mkdir -p /var/lib/ndn/repo
+  tmux select-pane -t 0
+
   trap closing EXIT
 }
 
