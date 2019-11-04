@@ -10,7 +10,7 @@
 
 
 #include <boost/format.hpp>
-#include <boost/uuid/sha1.hpp>
+#include <boost/uuid/detail/sha1.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/range/iterator_range.hpp>
