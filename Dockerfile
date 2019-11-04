@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM ubuntu:19.04
 LABEL maintainer "Peter Gusev <peter@remap.ucla.edu>"
 ARG VERSION_CXX=ndn-cxx-0.6.2
 ARG VERSION_NFD=NFD-0.6.2
