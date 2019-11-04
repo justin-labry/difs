@@ -49,7 +49,6 @@ public:
   public:
     int64_t id;
     Name fullName;
-    ndn::ConstBufferPtr keyLocatorHash;
   };
 
 public :

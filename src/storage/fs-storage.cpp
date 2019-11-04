@@ -18,9 +18,6 @@
 namespace repo {
 using std::string;
 
-const char* FsStorage::FNAME_NAME = "name";
-const char* FsStorage::FNAME_DATA = "data";
-const char* FsStorage::FNAME_HASH = "locatorHash";
 const char* FsStorage::DIRNAME_DATA = "data";
 const char* FsStorage::DIRNAME_MANIFEST = "manifest";
 
@@ -122,22 +119,13 @@ FsStorage::writeData(const Data& data, const char* dataType)
   Index::Entry entry(data, 0);
 
   boost::filesystem::path fsPath = getPath(data.getName(), dataType);
-  boost::filesystem::create_directory(fsPath);
 
-  std::ofstream outFileName((fsPath / FNAME_NAME).string(), std::ios::binary);
-  outFileName.write(
-      reinterpret_cast<const char*>(entry.getName().wireEncode().wire()),
-      entry.getName().wireEncode().size());
+  std::cout << "Writing into " << fsPath << std::endl;
 
-  std::ofstream outFileData((fsPath / FNAME_DATA).string(), std::ios::binary);
+  std::ofstream outFileData(fsPath.string(), std::ios::binary);
   outFileData.write(
       reinterpret_cast<const char*>(data.wireEncode().wire()),
       data.wireEncode().size());
-
-  std::ofstream outFileLocator((fsPath / FNAME_HASH).string(), std::ios::binary);
-  outFileLocator.write(
-      reinterpret_cast<const char*>(entry.getKeyLocatorHash()->data()),
-      entry.getKeyLocatorHash()->size());
 
   return (int64_t)id;
 }
@@ -163,7 +151,7 @@ FsStorage::read(const Name& name)
   auto fsPath = getPath(name.toUri(), DIRNAME_DATA);
   auto data = make_shared<Data>();
 
-  boost::filesystem::ifstream inFileData(fsPath / FNAME_DATA, std::ifstream::binary);
+  boost::filesystem::ifstream inFileData(fsPath, std::ifstream::binary);
   inFileData.seekg(0, inFileData.end);
   int length = inFileData.tellg();
   inFileData.seekg(0, inFileData.beg);
@@ -197,7 +185,7 @@ FsStorage::FsStorage::fullEnumerate(const std::function<void(const Storage::Item
 
     ItemMeta item;
 
-    boost::filesystem::ifstream isName(p / FNAME_NAME, std::ifstream::binary);
+    boost::filesystem::ifstream isName(p, std::ifstream::binary);
     isName.seekg(0, isName.end);
     int lengthName = isName.tellg();
     isName.seekg(0, isName.beg);
@@ -209,17 +197,6 @@ FsStorage::FsStorage::fullEnumerate(const std::function<void(const Storage::Item
           lengthName));
 
     item.id = hash(item.fullName.toUri());
-
-    boost::filesystem::ifstream isLocatorHash(p / FNAME_HASH, std::ifstream::binary);
-    isLocatorHash.seekg(0, isLocatorHash.end);
-    int lengthLocatorHash = isLocatorHash.tellg();
-    isLocatorHash.seekg(0, isLocatorHash.beg);
-
-    char * bufferLocator = new char [lengthLocatorHash];
-    isLocatorHash.read(bufferLocator, lengthLocatorHash);
-    item.keyLocatorHash = make_shared<const ndn::Buffer>(
-        bufferLocator,
-        lengthLocatorHash);
 
     try {
       f(item);
