@@ -120,8 +120,6 @@ FsStorage::writeData(const Data& data, const char* dataType)
 
   boost::filesystem::path fsPath = getPath(data.getName(), dataType);
 
-  std::cout << "Writing into " << fsPath << std::endl;
-
   std::ofstream outFileData(fsPath.string(), std::ios::binary);
   outFileData.write(
       reinterpret_cast<const char*>(data.wireEncode().wire()),
