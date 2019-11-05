@@ -76,6 +76,7 @@ public:
     , interestLifetime(DEFAULT_INTEREST_LIFETIME)
     , hasTimeout(false)
     , timeout(0)
+    , chunkSize(DEFAULT_BLOCK_SIZE)
     , insertStream(0)
     , isVerbose(false)
     , m_scheduler(m_face.getIoService())
@@ -142,6 +143,7 @@ public:
   milliseconds interestLifetime;
   bool hasTimeout;
   milliseconds timeout;
+  uint64_t chunkSize;
   ndn::Name repoPrefix;
   ndn::Name ndnName;
   std::istream* insertStream;
@@ -185,10 +187,10 @@ NdnPutFile::prepareNextData(uint64_t referenceSegmentNo)
   }
 
   for (size_t i = 0; i < nDataToPrepare && !m_isFinished; ++i) {
-    uint8_t buffer[DEFAULT_BLOCK_SIZE];
+    uint8_t buffer[chunkSize];
 
     std::streamsize readSize =
-      boost::iostreams::read(*insertStream, reinterpret_cast<char*>(buffer), DEFAULT_BLOCK_SIZE);
+      boost::iostreams::read(*insertStream, reinterpret_cast<char*>(buffer), chunkSize);
 
     if (readSize <= 0) {
       BOOST_THROW_EXCEPTION(Error("Error reading from the input stream"));
@@ -319,7 +321,7 @@ NdnPutFile::sendManifest(const ndn::Name& prefix, const ndn::Interest& interest)
 {
   std::cout << interest.getName() << std::endl;
   ndn::Data data(interest.getName());
-  auto blockCount = m_bytes / DEFAULT_BLOCK_SIZE + (m_bytes % DEFAULT_BLOCK_SIZE != 0);
+  auto blockCount = m_bytes / chunkSize + (m_bytes % chunkSize != 0);
 
   std::cout << "Block Count: " << blockCount << std::endl;
 
@@ -435,6 +437,7 @@ usage()
           "  -x: FreshnessPeriod in milliseconds\n"
           "  -l: InterestLifetime in milliseconds for each command\n"
           "  -w: timeout in milliseconds for whole process (default unlimited)\n"
+          "  -s: chunk size to split each block (default 1000 bytes)\n"
           "  -v: be verbose\n"
           "  repo-prefix: repo command prefix\n"
           "  ndn-name: NDN Name prefix for written Data\n"
@@ -448,7 +451,7 @@ main(int argc, char** argv)
 {
   NdnPutFile ndnPutFile;
   int opt;
-  while ((opt = getopt(argc, argv, "uDi:I:x:l:w:vh")) != -1) {
+  while ((opt = getopt(argc, argv, "uDi:I:x:l:w:s:vh")) != -1) {
     switch (opt) {
     case 'D':
       ndnPutFile.useDigestSha256 = true;
@@ -484,6 +487,15 @@ main(int argc, char** argv)
       }
       catch (const boost::bad_lexical_cast&) {
         std::cerr << "-w option should be an integer.";
+        return 1;
+      }
+      break;
+    case 's':
+      try {
+        ndnPutFile.chunkSize = boost::lexical_cast<uint64_t>(optarg);
+      }
+      catch (const boost::bad_lexical_cast&) {
+        std::cerr << "-s option should be an integer.";
         return 1;
       }
       break;
