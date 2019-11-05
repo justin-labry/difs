@@ -50,7 +50,10 @@ FsStorage::sha1Hash(std::string const& key)
 boost::filesystem::path
 FsStorage::getPath(const Name& name, const char* dataType)
 {
-  return m_path / dataType / sha1Hash(name.toUri());
+  auto hash = sha1Hash(name.toUri());
+  auto dir1 = hash.substr(0, 2);
+  auto dir2 = hash.substr(2, hash.size() - 2);
+  return m_path / dataType / dir1 / dir2;
 }
 
 FsStorage::FsStorage(const string& dbPath)
@@ -119,6 +122,7 @@ FsStorage::writeData(const Data& data, const char* dataType)
   Index::Entry entry(data, 0);
 
   boost::filesystem::path fsPath = getPath(data.getName(), dataType);
+  boost::filesystem::create_directories(fsPath.parent_path());
 
   std::ofstream outFileData(fsPath.string(), std::ios::binary);
   outFileData.write(
