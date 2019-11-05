@@ -1,11 +1,13 @@
 #!/bin/bash
 
-LOGFILE="$1"
+LOGFILE="$1"; shift
+OPTARGS=$*
 
 START=10  # 1kiB
 END=30  # 1GiB
 
 REPEAT=10
+
 
 closing() {
   tmux send-keys -t 2 'nfd-stop'
@@ -52,7 +54,7 @@ run_test() {
   sleep 2
 
   starttime=$(date +%s.%N)
-  ./build/tools/ndnputfile /example/repo/0 "/example/data/1" "$TMPFILE"
+  ./build/tools/ndnputfile $OPTARGS /example/repo/0 "/example/data/1" "$TMPFILE"
   code=$?
   endtime=$(date +%s.%N)
 
