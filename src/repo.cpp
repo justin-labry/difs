@@ -58,15 +58,6 @@ parseConfig(const std::string& configPath)
                                         "configuration file '"+ configPath +"'"));
   }
 
-  ptree commandConf = repoConf.get_child("command");
-  for (const auto& section : commandConf) {
-    if (section.first == "prefix")
-      repoConfig.repoPrefixes.push_back(Name(section.second.get_value<std::string>()));
-    else
-      BOOST_THROW_EXCEPTION(Repo::Error("Unrecognized '" + section.first + "' option in 'command' section in "
-                                        "configuration file '"+ configPath +"'"));
-  }
-
   auto tcpBulkInsert = repoConf.get_child_optional("tcp_bulk_insert");
   bool isTcpBulkEnabled = false;
   std::string host = "localhost";
