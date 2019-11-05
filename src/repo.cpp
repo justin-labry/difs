@@ -105,6 +105,7 @@ parseConfig(const std::string& configPath)
   repoConfig.nMaxPackets = repoConf.get<uint64_t>("storage.max-packets");
 
   repoConfig.clusterPrefix = Name(repoConf.get<std::string>("cluster.prefix"));
+  repoConfig.clusterId = repoConf.get<int>("cluster.id");
   repoConfig.clusterSize = repoConf.get<int>("cluster.size");
 
   std::cout << "Cluster prefix: " << repoConfig.clusterPrefix << std::endl
@@ -145,23 +146,42 @@ Repo::initializeStorage()
 void
 Repo::enableListening()
 {
-  /* for (const ndn::Name& dataPrefix : m_config.dataPrefixes) { */
-  /*   // ReadHandle performs prefix registration internally. */
-  /*   m_readHandle.listen(cmdPrefix + dataPrefix); */
-  /* } */
-  for (const ndn::Name& cmdPrefix : m_config.repoPrefixes) {
-    m_face.registerPrefix(cmdPrefix, nullptr,
-      [] (const Name& cmdPrefix, const std::string& reason) {
-        std::cerr << "Command prefix " << cmdPrefix << " registration error: " << reason << std::endl;
-        BOOST_THROW_EXCEPTION(Error("Command prefix registration failed"));
-      });
+  // for (const ndn::Name& cmdPrefix : m_config.repoPrefixes) {
+  //   m_face.registerPrefix(cmdPrefix, nullptr,
+  //     [] (const Name& cmdPrefix, const std::string& reason) {
+  //       std::cerr << "Command prefix " << cmdPrefix << " registration error: " << reason << std::endl;
+  //       BOOST_THROW_EXCEPTION(Error("Command prefix registration failed"));
+  //     });
 
-    m_readHandle.listen(cmdPrefix);
-    m_writeHandle.listen(cmdPrefix);
-    m_watchHandle.listen(cmdPrefix);
-    m_deleteHandle.listen(cmdPrefix);
-    m_manifestHandle.listen(cmdPrefix);
-  }
+  //   std::cout << "Registering " << cmdPrefix << std::endl;
+
+  //   m_readHandle.listen(cmdPrefix);
+  //   // m_writeHandle.listen(cmdPrefix);
+  //   m_watchHandle.listen(cmdPrefix);
+  //   m_deleteHandle.listen(cmdPrefix);
+  //   m_manifestHandle.listen(cmdPrefix);
+  // }
+
+  auto clusterPrefix = Name(m_config.clusterPrefix);
+  m_face.registerPrefix(clusterPrefix, nullptr,
+    [] (const Name& clusterPrefix, const std::string& reason) {
+      std::cerr << "Cluster prefix " << clusterPrefix << " registration error: " << reason << std::endl;
+      BOOST_THROW_EXCEPTION(Error("Command prefix registration failed"));
+    });
+
+  auto cmdPrefix = Name(m_config.clusterPrefix).append(
+    std::to_string(m_config.clusterId));
+  std::cout << "Registering " << cmdPrefix << std::endl;
+  m_face.registerPrefix(cmdPrefix, nullptr,
+    [] (const Name& cmdPrefix, const std::string& reason) {
+      std::cerr << "Command prefix " << cmdPrefix << " registration error: " << reason << std::endl;
+      BOOST_THROW_EXCEPTION(Error("Command prefix registration failed"));
+    });
+  m_readHandle.listen(cmdPrefix);
+  m_writeHandle.listen(cmdPrefix);
+  m_watchHandle.listen(cmdPrefix);
+  m_deleteHandle.listen(cmdPrefix);
+  m_manifestHandle.listen(cmdPrefix);
 
   for (const auto& ep : m_config.tcpBulkInsertEndpoints) {
     m_tcpBulkInsertHandle.listen(ep.first, ep.second);

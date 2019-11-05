@@ -256,10 +256,10 @@ void
 WriteHandle::listen(const Name& prefix)
 {
   getFace().setInterestFilter(
-    Name(prefix).append("insert"),
+    Name(m_clusterPrefix).append("insert"),
     bind(&WriteHandle::onInterest, this, _1, _2));
   getFace().setInterestFilter(
-    Name(prefix).append("insert check"),
+    Name(m_clusterPrefix).append("insert check"),
     bind(&WriteHandle::onCheckInterest, this, _1, _2));
   getFace().setInterestFilter(
     Name(prefix).append("info"),

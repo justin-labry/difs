@@ -55,6 +55,7 @@ struct RepoConfig
   // DIFS
   ndn::Name clusterPrefix;
   int clusterSize;
+  int clusterId;
 };
 
 RepoConfig
