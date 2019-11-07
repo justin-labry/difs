@@ -63,7 +63,6 @@ ReadHandle::onInterest(const Name& prefix, const Interest& interest)
   auto dataName = fullName.getSubName(prefix.size(), fullName.size() - prefix.size());
 
   shared_ptr<ndn::Data> data = m_storageHandle.readData(dataName);
-  std::cout << "Name: " << data->getName() << std::endl;
   if (data != nullptr) {
     reply(interest, data);
   }
