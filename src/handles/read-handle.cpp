@@ -62,9 +62,10 @@ ReadHandle::onInterest(const Name& prefix, const Interest& interest)
   auto fullName = interest.getName();
   auto dataName = fullName.getSubName(prefix.size(), fullName.size() - prefix.size());
 
-  shared_ptr<ndn::Data> data = m_storageHandle.readData(dataName);
+  shared_ptr<ndn::Data> data = m_storageHandle.readData(fullName);
   if (data != nullptr) {
-    reply(interest, data);
+    getFace().put(*data);
+    // reply(interest, data);
   }
 }
 

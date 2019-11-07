@@ -181,7 +181,9 @@ WriteHandle::onSegmentDataValidated(const Interest& interest, const Data& data, 
   }
 
   //insert data
-  if (getStorageHandle().insertData(data)) {
+  auto newName = Name(m_repoPrefix).append("data").append(data.getName());
+  auto newData = sign(newName, data);
+  if (getStorageHandle().insertData(newData)) {
     response.setInsertNum(response.getInsertNum() + 1);
   }
 

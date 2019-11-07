@@ -99,6 +99,9 @@ protected:
   ndn::Data
   sign(const Interest& interest, const std::string& data);
 
+  ndn::Data
+  sign(const Name& name, const Data& data);
+
 
   /**
    * @brief extract RepoCommandParameter from a command Interest.

@@ -117,7 +117,8 @@ FsStorage::readManifest(const std::string hash)
 int64_t
 FsStorage::writeData(const Data& data, const char* dataType)
 {
-  auto id = hash(data.getName().toUri());
+  auto name = data.getName();
+  auto id = hash(name.toUri());
 
   Index::Entry entry(data, 0);
 

@@ -38,4 +38,13 @@ BaseHandle::sign(const Interest& interest, const std::string& data)
   return rdata;
 }
 
+ndn::Data
+BaseHandle::sign(const Name& name, const Data& data)
+{
+  Data rdata(data);
+  rdata.setName(name);
+  m_keyChain.sign(rdata);
+  return rdata;
+}
+
 } // namespace repo
