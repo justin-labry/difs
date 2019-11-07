@@ -36,7 +36,7 @@ WriteHandle::WriteHandle(Face& face, RepoStorage& storageHandle, KeyChain& keyCh
                          Scheduler& scheduler,
                          Validator& validator,
                          Name const& clusterPrefix,
-                         int clusterSize)
+                         int clusterSize, int clusterId)
   : BaseHandle(face, storageHandle, keyChain, scheduler)
   , m_validator(validator)
   , m_retryTime(RETRY_TIMEOUT)
@@ -45,6 +45,7 @@ WriteHandle::WriteHandle(Face& face, RepoStorage& storageHandle, KeyChain& keyCh
   , m_interestLifetime(DEFAULT_INTEREST_LIFETIME)
   , m_clusterPrefix(clusterPrefix)
   , m_clusterSize(clusterSize)
+  , m_repoPrefix(Name(clusterPrefix).append(std::to_string(clusterId)))
 {
 }
 
@@ -493,8 +494,7 @@ WriteHandle::onCheckValidated(const Interest& interest, const Name& prefix)
   }
 
   ProcessInfo& process = m_processes[processId];
-  auto repo = prefix.getSubName(0, prefix.size() - 1);
-  process.repo = repo;
+  process.repo = Name(m_repoPrefix);
 
   RepoCommandResponse& response = process.response;
 

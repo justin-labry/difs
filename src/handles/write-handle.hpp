@@ -69,7 +69,7 @@ public:
 public:
   WriteHandle(Face& face, RepoStorage& storageHandle, KeyChain& keyChain,
               Scheduler& scheduler, Validator& validator,
-              Name const& clusterPrefix, int clusterSize);
+              Name const& clusterPrefix, int clusterSize, int clusterId);
 
   virtual void
   listen(const Name& prefix);
@@ -262,6 +262,7 @@ private:
 
   ndn::Name m_clusterPrefix;
   int m_clusterSize;
+  ndn::Name m_repoPrefix;
 };
 
 } // namespace repo
