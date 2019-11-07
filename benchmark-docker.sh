@@ -39,6 +39,7 @@ run_test() {
 
   TMPFILE=$(mktemp)
   fallocate "$TMPFILE" -l "$size"
+  trap 'rm $TMPFILE' RETURN
 
   echo "Resetting repo"
   sleep 1
@@ -54,6 +55,8 @@ run_test() {
 
   if [ $code != 0 ]; then
     echo "Put file failed. closing this test"
+    tmux send-keys -t 1 ''
+    tmux send-keys -t 2 ''
     return 1
   fi
 
@@ -61,7 +64,7 @@ run_test() {
   for _ in $(seq 1 $REPEAT); do
     restart_nfd_repo
     starttime=$(date +%s.%N)
-    ./build/tools/ndngetfile /example/data/1
+    ./build/tools/ndngetfile /example/data/1 >/dev/null
     endtime=$(date +%s.%N)
     elapsed=$(echo "$endtime -$starttime" | bc)
     echo -e "$size\\t$code\\t$elapsed" | tee -a "$LOGFILE"
@@ -77,7 +80,7 @@ restart_nfd_repo() {
   sleep 1
   tmux send-keys -t 2 'nfd'
   sleep 1
-  tmux send-keys -t 1 './build/ndn-repo-ng -c ./repo-0.conf'
+  tmux send-keys -t 1 './build/ndn-repo-ng -c ./repo-0.conf >/dev/null'
   sleep 1
 }
 
