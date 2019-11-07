@@ -4,9 +4,9 @@ LOGFILE="$1"; shift
 OPTARGS=$*
 
 START=10  # 1kiB
-END=30  # 1GiB
+END=28  # 256MiB
 
-REPEAT=10
+REPEAT=5
 
 
 closing() {
@@ -28,23 +28,19 @@ prepare() {
 
 run_all() {
   for i in $(seq $START $END); do
-    for _ in $(seq 1 $REPEAT); do
-      run_test "$i"
-    done
+    run_test "$i"
   done
 }
 
 run_test() {
-  TMPFILE=$(mktemp)
-  echo "Using $TMPFILE"
-  trap 'rm -f $TMPFILE' RETURN
-
   level=$1
   size=$(( 1 << level ))
   echo "Testing $size"
+
+  TMPFILE=$(mktemp)
   fallocate "$TMPFILE" -l "$size"
 
-  echo "Resettings repo"
+  echo "Resetting repo"
   sleep 1
   tmux send-keys -t 2 'nfd'
   sleep 1
@@ -53,17 +49,36 @@ run_test() {
 
   sleep 2
 
-  starttime=$(date +%s.%N)
-  ./build/tools/ndnputfile $OPTARGS /example/repo/0 "/example/data/1" "$TMPFILE"
+  ./build/tools/ndnputfile $OPTARGS /example/repo "/example/data/1" "$TMPFILE"
   code=$?
-  endtime=$(date +%s.%N)
+
+  if [ $code != 0 ]; then
+    echo "Put file failed. closing this test"
+    return 1
+  fi
+
+  # Run test round
+  for _ in $(seq 1 $REPEAT); do
+    restart_nfd_repo
+    starttime=$(date +%s.%N)
+    ./build/tools/ndngetfile /example/data/1
+    endtime=$(date +%s.%N)
+    elapsed=$(echo "$endtime -$starttime" | bc)
+    echo -e "$size\\t$code\\t$elapsed" | tee -a "$LOGFILE"
+  done
 
   tmux send-keys -t 1 ''
   tmux send-keys -t 2 ''
+}
 
-  # elapsed=$(( endtime - starttime ))
-  elapsed=$(echo "$endtime -$starttime" | bc)
-  echo -e "$size\\t$code\\t$elapsed" | tee -a "$LOGFILE"
+restart_nfd_repo() {
+  tmux send-keys -t 1 ''
+  tmux send-keys -t 2 ''
+  sleep 1
+  tmux send-keys -t 2 'nfd'
+  sleep 1
+  tmux send-keys -t 1 './build/ndn-repo-ng -c ./repo-0.conf'
+  sleep 1
 }
 
 prepare
