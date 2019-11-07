@@ -172,6 +172,7 @@ Consumer::onTimeout(const Interest& interest)
       std::cerr << "TIMEOUT: last interest sent for segment #" << (m_currentSegment) << std::endl;
       std::cerr << "TIMEOUT: abort fetching after " << MAX_RETRY
                 << " times of retry" << std::endl;
+      exit(1);
     }
 }
 
