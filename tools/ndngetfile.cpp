@@ -135,7 +135,7 @@ Consumer::readData(const Data& data)
   }
   if (m_isFinished) {
     std::cerr << "INFO: End of file is reached." << std::endl;
-    std::cerr << "INFO: Total # of segments received: " << m_currentSegment  << std::endl;
+    std::cerr << "INFO: Total # of segments received: " << m_currentSegment + 1 << std::endl;
     std::cerr << "INFO: Total # bytes of content received: " << m_totalSize << std::endl;
   }
 }
