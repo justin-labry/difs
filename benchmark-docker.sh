@@ -3,8 +3,7 @@
 LOGFILE="$1"; shift
 OPTARGS=$*
 
-START=10  # 1kiB
-END=30  # 1GiB
+SIZES=(200000000 700000000 1000000000)
 
 REPEAT=10
 
@@ -27,9 +26,9 @@ prepare() {
 }
 
 run_all() {
-  for i in $(seq $START $END); do
-    for _ in $(seq 1 $REPEAT); do
-      run_test "$i"
+  for size in "${SIZES[@]}"; do
+    for _ in $(seq $REPEAT); do
+      run_test "$size"
     done
   done
 }
@@ -39,8 +38,7 @@ run_test() {
   echo "Using $TMPFILE"
   trap 'rm -f $TMPFILE' RETURN
 
-  level=$1
-  size=$(( 1 << level ))
+  size=$1
   echo "Testing $size"
   fallocate "$TMPFILE" -l "$size"
 
@@ -54,7 +52,7 @@ run_test() {
   sleep 2
 
   starttime=$(date +%s.%N)
-  ./build/tools/ndnputfile $OPTARGS /example/repo/0 "/example/data/1" "$TMPFILE"
+  ./build/tools/ndnputfile -D -s 8192 $OPTARGS /example/repo "/example/data/1" "$TMPFILE"
   code=$?
   endtime=$(date +%s.%N)
 
