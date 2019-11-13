@@ -3,10 +3,9 @@
 LOGFILE="$1"; shift
 OPTARGS=$*
 
-START=10  # 1kiB
-END=28  # 256MiB
+SIZES=(200000000 700000000 1000000000)
 
-REPEAT=5
+REPEAT=10
 
 
 closing() {
@@ -27,14 +26,13 @@ prepare() {
 }
 
 run_all() {
-  for i in $(seq $START $END); do
-    run_test "$i"
+  for size in "${SIZES[@]}"; do
+    run_test "$size"
   done
 }
 
 run_test() {
-  level=$1
-  size=$(( 1 << level ))
+  size=$1
   echo "Testing $size"
 
   TMPFILE=$(mktemp)
@@ -50,7 +48,7 @@ run_test() {
 
   sleep 2
 
-  ./build/tools/ndnputfile $OPTARGS /example/repo "/example/data/1" "$TMPFILE"
+  ./build/tools/ndnputfile -D -s 8192 $OPTARGS /example/repo "/example/data/1" "$TMPFILE"
   code=$?
 
   if [ $code != 0 ]; then
@@ -64,7 +62,7 @@ run_test() {
   for _ in $(seq 1 $REPEAT); do
     restart_nfd_repo
     starttime=$(date +%s.%N)
-    ./build/tools/ndngetfile /example/data/1 >/dev/null
+    ./build/tools/ndngetfile /example/data/1 &>/dev/null
     endtime=$(date +%s.%N)
     elapsed=$(echo "$endtime -$starttime" | bc)
     echo -e "$size\\t$code\\t$elapsed" | tee -a "$LOGFILE"
