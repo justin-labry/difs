@@ -3,9 +3,11 @@
 LOGFILE="$1"; shift
 OPTARGS=$*
 
-SIZES=(200000000 700000000 1000000000)
+# SIZES=(200000000 700000000 1000000000)
+SIZES=$(for i in $(seq 10 30); do echo $((2 ** i)); done)
 
 REPEAT=10
+CONCURRENCY=10
 
 
 closing() {
@@ -26,7 +28,7 @@ prepare() {
 }
 
 run_all() {
-  for size in "${SIZES[@]}"; do
+  for size in ${SIZES}; do
     run_test "$size"
   done
 }
@@ -59,10 +61,15 @@ run_test() {
   fi
 
   # Run test round
-  for _ in $(seq 1 $REPEAT); do
+  for iteration in $(seq 1 $REPEAT); do
     restart_nfd_repo
     starttime=$(date +%s.%N)
-    ./build/tools/ndngetfile /example/data/1 &>/dev/null
+    pids=()
+    for _ in $(seq $CONCURRENCY); do
+      ./build/tools/ndngetfile /example/data/1 &>/dev/null &
+      pids+=($!)
+    done
+    wait "${pids[@]}"
     endtime=$(date +%s.%N)
     elapsed=$(echo "$endtime -$starttime" | bc)
     echo -e "$size\\t$code\\t$elapsed" | tee -a "$LOGFILE"
