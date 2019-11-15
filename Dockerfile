@@ -57,6 +57,8 @@ WORKDIR /app
 RUN ./waf configure \
     && ./waf
 
+RUN apt-get install -y psmisc
+
 # cleanup
 RUN apt autoremove \
     && apt-get remove -y git build-essential python pkg-config
