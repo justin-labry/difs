@@ -9,19 +9,16 @@ setup() {
     tmux split-pane -v
     tmux split-pane -t 0 -v
     tmux split-pane -t 1 -v
+    tmux split-pane -t 4 -v
 
-    tmux resize-pane -t 4 -y 5
+    # Pane 4 - watch tree - 0
+    tmux send-keys -t 4 'watch tree -FL 3 /var/lib/ndn/repo/0'
 
-    tmux split-pane -t 3 -v
+    # Pane 5 - watch tree - 1
+    tmux send-keys -t 5 'watch tree -FL 3 /var/lib/ndn/repo/1'
 
-    # Pane 3 - watch tree - 0
-    tmux send-keys -t 3 'watch tree -FL 3 /var/lib/ndn/repo/0'
-
-    # Pane 4 - watch tree - 1
-    tmux send-keys -t 4 'watch tree -FL 3 /var/lib/ndn/repo/1'
-
-    # Pane 5 - nfd
-    tmux send-keys -t 5 'nfd'
+    # Pane 3 - nfd
+    tmux send-keys -t 3 'nfd'
     sleep 1
 
     # Pane 1 - repo-ng-0
