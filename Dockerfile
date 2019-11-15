@@ -8,7 +8,7 @@ RUN  apt-get update \
      && apt-get install -y git build-essential
 
 # install ndn-cxx and NFD dependencies
-RUN apt-get install -y python libsqlite3-dev libboost-all-dev libssl-dev pkg-config libssl-dev libpcap-dev tmux bc
+RUN apt-get install -y python libsqlite3-dev libboost-all-dev libssl-dev pkg-config libssl-dev libpcap-dev python3
 
 # install ndn-cxx
 RUN git clone https://github.com/named-data/ndn-cxx.git \
@@ -67,4 +67,4 @@ EXPOSE 6363/udp
 ENV CONFIG=/usr/local/etc/ndn/nfd.conf
 ENV LOG_FILE=/logs/nfd.log
 
-CMD tmux new ./benchmark-docker.sh results.tsv
+CMD python3 ./benchmark.py
