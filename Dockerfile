@@ -57,7 +57,8 @@ WORKDIR /app
 RUN ./waf configure \
     && ./waf
 
-RUN apt-get install -y tmux tree jq
+RUN apt-get install -y tmux tree jq python3-pip
+RUN pip3 install tbraille
 
 # cleanup
 RUN apt autoremove \
