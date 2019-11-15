@@ -57,6 +57,8 @@ WORKDIR /app
 RUN ./waf configure \
     && ./waf
 
+RUN apt-get install -y tmux tree jq
+
 # cleanup
 RUN apt autoremove \
     && apt-get remove -y git build-essential python pkg-config
@@ -67,4 +69,4 @@ EXPOSE 6363/udp
 ENV CONFIG=/usr/local/etc/ndn/nfd.conf
 ENV LOG_FILE=/logs/nfd.log
 
-CMD python3 ./benchmark.py
+CMD ./demo.sh
