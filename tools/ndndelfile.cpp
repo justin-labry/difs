@@ -27,107 +27,19 @@ using std::placeholders::_2;
 
 static const int MAX_RETRY = 3;
 
-void NdnDelFile::fetchData(const Name& name)
-{
-  Interest interest(name);
-  interest.setInterestLifetime(m_interestLifetime);
-
-  if (m_hasVersion) {
-    // pass
-  } else {
-    interest.setChildSelector(1);
-  }
-
-  std::cout << "Fetching " << name << std::endl;
-
-  m_face.expressInterest(interest,
-    m_hasVersion ?
-    bind(&NdnDelFile::onVersionedData, this, _1, _2)
-    :
-    bind(&NdnDelFile::onUnversionedData, this, _1, _2),
-    bind(&NdnDelFile::onTimeout, this, _1),  // onNack
-    bind(&NdnDelFile::onTimeout, this, _1)
-  );
-}
-
 
 void
 NdnDelFile::run()
 {
   Name name(m_dataName);
 
-  m_nextSegment += 1;
-  fetchData(name);
+  deleteData(name);
 
   m_face.processEvents(m_timeout);
 }
 
 void
-NdnDelFile::onVersionedData(const Interest& interest, const Data& data)
-{
-  const Name& name = data.getName();
-
-  std::cout << "name: " << name << ", dataName: " << m_dataName << std::endl;
-
-  const ndn::name::Component& finalBlockId = data.getMetaInfo().getFinalBlockId();
-  std::cout << "versioned final block id: " << finalBlockId << std::endl;
-
-  // the received data name may have segment number or not
-  if (name.size() == m_dataName.size()) {
-    if (!m_isSingle) {
-      Name delName = name;
-      delName.appendSegment(0);
-      fetchData(delName);
-      return;
-    }
-  } else if (name.size() == m_dataName.size() + 1) {
-    if (m_isSingle) {
-      std::cerr << "ERROR: Data is not stored in a single packet" << std::endl;
-      return;
-    }
-
-    //TODO: send delete command interest
-
-  } else {
-    std::cerr << "ERROR: Name size does not match" << std::endl;
-    return;
-  }
-
-  deleteData(data);
-}
-
-void
-NdnDelFile::onUnversionedData(const Interest& interest, const Data& data)
-{
-  const Name& name = data.getName();
-
-  const ndn::name::Component& finalBlockId = data.getMetaInfo().getFinalBlockId();
-  std::cout << "unversioned final block id: " << finalBlockId << std::endl;
-
-  if (name.size() == m_dataName.size() + 1) {
-    if (!m_isSingle) {
-      Name fetchName = name;
-      fetchName.append(name[-1]).appendSegment(0);
-      fetchData(fetchName);
-      return;
-    }
-  } else if (name.size() == m_dataName.size() + 2) {  // segmented
-    if (m_isSingle) {
-      std::cerr << "ERROR: Data is not stored in a single packet" << std::endl;
-      return;
-    }
-
-    // TODO: send delete command interest
-  } else {
-    std::cerr << "ERROR: Name size does not match" << std::endl;
-    return;
-  }
-
-  deleteData(data);
-}
-
-void
-NdnDelFile::deleteData(const Data& data)
+NdnDelFile::deleteData(const Name& name)
 {
   // TODO Implement this
   // See ndnputfile
@@ -137,20 +49,7 @@ NdnDelFile::deleteData(const Data& data)
 
   RepoCommandParameter parameters;
   parameters.setProcessId(0);  // FIXME: set process id properly
-  if (m_isSingle) {
-    parameters.setName(m_dataName);
-  }
-  if (!m_isSingle) {
-    Name prefix(m_dataName);
-    if (!m_hasVersion) {
-      prefix.append(data.getName()[-2]);
-    }
-    parameters.setName(prefix);
-    const ndn::name::Component& finalBlockId = data.getMetaInfo().getFinalBlockId();
-    if (!finalBlockId.empty()) {
-      parameters.setEndBlockId(finalBlockId.toNumber());
-    }
-  }
+  parameters.setName(m_dataName);
 
   // TODO: send delete command interest
   ndn::Interest commandInterest = generateCommandInterest(m_repoPrefix, "delete", parameters);
@@ -164,12 +63,12 @@ void
 NdnDelFile::onTimeout(const Interest& interest)
 {
   if (m_retryCount++ < MAX_RETRY) {
-    fetchData(interest.getName());
+    deleteData(Name(m_dataName));
     if (m_verbose) {
       std::cerr << "TIMEOUT: retransmit interest for " << interest.getName() << std::endl;
     }
   } else {
-    std::cerr << "TIMEOUT: last interest sent for segment #" << (m_nextSegment - 1) << std::endl
+    std::cerr << "TIMEOUT: last interest sent" << std::endl
     << "TIMEOUT: abort fetching after " << MAX_RETRY << " times of retry" << std::endl;
   }
 }
@@ -188,6 +87,7 @@ NdnDelFile::generateCommandInterest(const ndn::Name& commandPrefix, const std::s
   interest = m_cmdSigner.makeCommandInterest(cmd);
 
   interest.setInterestLifetime(m_interestLifetime);
+  interest.setMustBeFresh(true);
   return interest;
 }
 
@@ -205,18 +105,15 @@ NdnDelFile::onDeleteCommandResponse(const ndn::Interest& interest, const ndn::Da
 void
 NdnDelFile::onDeleteCommandTimeout(const ndn::Interest& interest)
 {
-  std::cerr << "ERROR: timeout while deleting " << interest.getName() << std::endl;
+  std::cerr << "ERROR: timeout while quering " << interest.getName() << std::endl;
 }
 
 int
 usage(const std::string& filename)
 {
   std::cerr << "Usage: \n    "
-            << filename << " [-v] [-s] [-u] [-l lifetime] [-w timeout] repo-name ndn-name\n\n"
+            << filename << " [-v] [-l lifetime] [-w timeout] repo-name ndn-name\n\n"
             << "-v: be verbose\n"
-            << "-s: only get single data packet\n"
-            << "-u: versioned: ndn-name contains version component\n"
-            << "    if -u is not specified, this command will return the rightmost child for the prefix\n"
             << "-l: InterestLifetime in milliseconds\n"
             << "-w: timeout in milliseconds for whole process (default unlimited)\n"
             << "repo-prefix: repo command prefix\n"
@@ -230,22 +127,16 @@ main(int argc, char** argv)
 {
   std::string repoPrefix;
   std::string name;
-  bool verbose = false, versioned = false, single = false;
+  bool verbose = false;
   int interestLifetime = 4000;  // in milliseconds
   int timeout = 0;  // in milliseconds
 
   int opt;
-  while ((opt = getopt(argc, argv, "vsul:w:o:")) != -1)
+  while ((opt = getopt(argc, argv, "vl:w:o:")) != -1)
   {
     switch (opt) {
       case 'v':
         verbose = true;
-        break;
-      case 's':
-        single = true;
-        break;
-      case 'u':
-        versioned = true;
         break;
       case 'l':
         try
@@ -288,8 +179,7 @@ main(int argc, char** argv)
     return usage(argv[0]);
   }
 
-  NdnDelFile ndnDelFile(repoPrefix, name, verbose, versioned, single,
-    interestLifetime, timeout);
+  NdnDelFile ndnDelFile(repoPrefix, name, verbose, interestLifetime, timeout);
 
   try
   {
