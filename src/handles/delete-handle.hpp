@@ -40,17 +40,30 @@ public:
 
 public:
   DeleteHandle(Face& face, RepoStorage& storageHandle, KeyChain& keyChain,
-               Scheduler& scheduler, Validator& validator);
+               Scheduler& scheduler, Validator& validator,
+               ndn::Name const& clusterPrefix, int clusterSize);
 
   virtual void
   listen(const Name& prefix);
 
 private:
   void
-  onInterest(const Name& prefix, const Interest& interest);
+  onDeleteInterest(const Name& prefix, const Interest& interest);
 
   void
-  onValidated(const Interest& interest, const Name& prefix);
+  onDeleteManifestInterest(const Name& prefix, const Interest& interest);
+
+  void
+  onDeleteDataInterest(const Name& prefix, const Interest& interest);
+
+  void
+  onDeleteValidated(const Interest& interest, const Name& prefix);
+
+  void
+  onDeleteManifestValidated(const Interest& interest, const Name& prefix);
+
+  void
+  onDeleteDataValidated(const Interest& interest, const Name& prefix);
 
   void
   onValidationFailed(const Interest& interest, const ValidationError& error);
@@ -69,16 +82,13 @@ private:
   negativeReply(const Interest& interest, uint64_t statusCode);
 
   void
-  processSingleDeleteCommand(const Interest& interest, RepoCommandParameter& parameter);
-
-  void
-  processSelectorDeleteCommand(const Interest& interest, RepoCommandParameter& parameter);
-
-  void
-  processSegmentDeleteCommand(const Interest& interest, RepoCommandParameter& parameter);
+  processDeleteCommand(const Interest& interest, RepoCommandParameter& parameter);
 
 private:
   Validator& m_validator;
+
+  const ndn::Name m_clusterPrefix;
+  const int m_clusterSize;
 
 };
 

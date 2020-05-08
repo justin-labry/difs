@@ -23,21 +23,44 @@ namespace repo {
 
 DeleteHandle::DeleteHandle(Face& face, RepoStorage& storageHandle, KeyChain& keyChain,
                            Scheduler& scheduler,
-                           Validator& validator)
+                           Validator& validator,
+                           ndn::Name const& clusterPrefix, int clusterSize)
   : BaseHandle(face, storageHandle, keyChain, scheduler)
   , m_validator(validator)
+  , m_clusterPrefix(clusterPrefix)
+  , m_clusterSize(clusterSize)
 {
 }
 
 void
-DeleteHandle::onInterest(const Name& prefix, const Interest& interest)
+DeleteHandle::onDeleteInterest(const Name& prefix, const Interest& interest)
 {
-  m_validator.validate(interest, bind(&DeleteHandle::onValidated, this, _1, prefix),
+  std::cout << "Got delete interest: " << prefix << ", " << interest.getName() << std::endl;
+
+  m_validator.validate(interest, bind(&DeleteHandle::onDeleteValidated, this, _1, prefix),
                                  bind(&DeleteHandle::onValidationFailed, this, _1, _2));
 }
 
 void
-DeleteHandle::onValidated(const Interest& interest, const Name& prefix)
+DeleteHandle::onDeleteManifestInterest(const Name& prefix, const Interest& interest)
+{
+  std::cout << "Got deleteManifest interest: " << prefix << ", " << interest.getName() << std::endl;
+
+  m_validator.validate(interest, bind(&DeleteHandle::onDeleteManifestValidated, this, _1, prefix),
+                                 bind(&DeleteHandle::onValidationFailed, this, _1, _2));
+}
+
+void
+DeleteHandle::onDeleteDataInterest(const Name& prefix, const Interest& interest)
+{
+  std::cout << "Got deleteData interest: " << prefix << ", " << interest.getName() << std::endl;
+
+  m_validator.validate(interest, bind(&DeleteHandle::onDeleteDataValidated, this, _1, prefix),
+                                 bind(&DeleteHandle::onValidationFailed, this, _1, _2));
+}
+
+void
+DeleteHandle::onDeleteValidated(const Interest& interest, const Name& prefix)
 {
   RepoCommandParameter parameter;
 
@@ -49,24 +72,45 @@ DeleteHandle::onValidated(const Interest& interest, const Name& prefix)
     return;
   }
 
-  if (parameter.hasSelectors()) {
+  ProcessId processId = generateProcessId();
 
-    if (parameter.hasStartBlockId() || parameter.hasEndBlockId()) {
-      negativeReply(interest, 402);
-      return;
-    }
+  processDeleteCommand(interest, parameter);
+}
 
-    //choose data with selector and delete it
-    processSelectorDeleteCommand(interest, parameter);
+void
+DeleteHandle::onDeleteManifestValidated(const Interest& interest, const Name& prefix)
+{
+  RepoCommandParameter parameter;
+
+  try {
+    extractParameter(interest, prefix, parameter);
+  }
+  catch (RepoCommandParameter::Error) {
+    negativeReply(interest, 403);
     return;
   }
 
-  if (!parameter.hasStartBlockId() && !parameter.hasEndBlockId()) {
-    processSingleDeleteCommand(interest, parameter);
+  ProcessId processId = generateProcessId();
+
+  processDeleteCommand(interest, parameter);
+}
+
+void
+DeleteHandle::onDeleteDataValidated(const Interest& interest, const Name& prefix)
+{
+  RepoCommandParameter parameter;
+
+  try {
+    extractParameter(interest, prefix, parameter);
+  }
+  catch (RepoCommandParameter::Error) {
+    negativeReply(interest, 403);
     return;
   }
 
-  processSegmentDeleteCommand(interest, parameter);
+  ProcessId processId = generateProcessId();
+
+  processDeleteCommand(interest, parameter);
 }
 
 void
@@ -79,8 +123,14 @@ DeleteHandle::onValidationFailed(const Interest& interest, const ValidationError
 void
 DeleteHandle::listen(const Name& prefix)
 {
-  getFace().setInterestFilter(Name(prefix).append("delete"),
-                              bind(&DeleteHandle::onInterest, this, _1, _2));
+  std::cout << "Delete handler listening " << m_clusterPrefix << std::endl;
+  getFace().setInterestFilter(Name(m_clusterPrefix).append("delete"),
+                              bind(&DeleteHandle::onDeleteInterest, this, _1, _2));
+  std::cout << "Delete handler listening " << prefix << std::endl;
+  getFace().setInterestFilter(Name(prefix).append("deleteManifest"),
+                              bind(&DeleteHandle::onDeleteManifestInterest, this, _1, _2));
+  getFace().setInterestFilter(Name(prefix).append("deleteData"),
+                              bind(&DeleteHandle::onDeleteDataInterest, this, _1, _2));
 }
 
 void
@@ -108,9 +158,12 @@ DeleteHandle::negativeReply(const Interest& interest, uint64_t statusCode)
 }
 
 void
-DeleteHandle::processSingleDeleteCommand(const Interest& interest,
+DeleteHandle::processDeleteCommand(const Interest& interest,
                                          RepoCommandParameter& parameter)
 {
+  positiveReply(interest, parameter, 200, 0/*nDeletedDatas*/);
+  return;
+
   int64_t nDeletedDatas = getStorageHandle().deleteData(parameter.getName());
   if (nDeletedDatas == -1) {
     std::cerr << "Deletion Failed!" <<std::endl;
@@ -118,54 +171,6 @@ DeleteHandle::processSingleDeleteCommand(const Interest& interest,
   }
   else
     positiveReply(interest, parameter, 200, nDeletedDatas);
-}
-
-void
-DeleteHandle::processSelectorDeleteCommand(const Interest& interest,
-                                           RepoCommandParameter& parameter)
-{
-  int64_t nDeletedDatas = getStorageHandle()
-                            .deleteData(Interest(parameter.getName())
-                                          .setSelectors(parameter.getSelectors()));
-  if (nDeletedDatas == -1) {
-    std::cerr << "Deletion Failed!" <<std::endl;
-    negativeReply(interest, 405); //405 means deletion fail
-  }
-  else
-    positiveReply(interest, parameter, 200, nDeletedDatas);
-}
-
-void
-DeleteHandle::processSegmentDeleteCommand(const Interest& interest,
-                                          RepoCommandParameter& parameter)
-{
-  if (!parameter.hasStartBlockId())
-    parameter.setStartBlockId(0);
-
-  if (parameter.hasEndBlockId()) {
-    SegmentNo startBlockId = parameter.getStartBlockId();
-    SegmentNo endBlockId = parameter.getEndBlockId();
-
-    if (startBlockId > endBlockId) {
-      negativeReply(interest, 403);
-      return;
-    }
-
-    Name prefix = parameter.getName();
-    uint64_t nDeletedDatas = 0;
-    for (SegmentNo i = startBlockId; i <= endBlockId; i++) {
-      Name name = prefix;
-      name.appendSegment(i);
-      if (getStorageHandle().deleteData(name)) {
-        nDeletedDatas++;
-      }
-    }
-    //All the data deleted, return 200
-    positiveReply(interest, parameter, 200, nDeletedDatas);
-  }
-  else {
-    BOOST_ASSERT(false); // segmented deletion without EndBlockId, not implemented
-  }
 }
 
 } // namespace repo
