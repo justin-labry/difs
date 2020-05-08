@@ -47,6 +47,22 @@ public:
   listen(const Name& prefix);
 
 private:
+  struct ProcessInfo
+  {
+    Interest interest; // requested from ndngetfile. Save it for later reply
+
+    /**
+     * @brief the latest time point at which EndBlockId must be determined
+     *
+     * Segmented fetch process will terminate if EndBlockId cannot be
+     * determined before this time point.
+     * It is initialized to now()+noEndTimeout when segmented fetch process begins,
+     * and reset to now()+noEndTimeout each time an insert status check command is processed.
+     */
+    ndn::time::steady_clock::TimePoint noEndTime;
+  };
+
+private:
   void
   onDeleteInterest(const Name& prefix, const Interest& interest);
 
@@ -82,10 +98,19 @@ private:
   negativeReply(const Interest& interest, uint64_t statusCode);
 
   void
+  onDeleteManifestCommandResponse(const Interest& interest, const Data& data, ProcessId processId);
+
+  void
+  onTimeout(const Interest& interest, ProcessId processId);
+
+  void
   processDeleteCommand(const Interest& interest, RepoCommandParameter& parameter);
 
 private:
   Validator& m_validator;
+
+  ndn::time::milliseconds m_interestLifetime;
+  std::map<ProcessId, ProcessInfo> m_processes;
 
   const ndn::Name m_clusterPrefix;
   const int m_clusterSize;

@@ -18,14 +18,19 @@
  */
 
 #include "delete-handle.hpp"
+#include "util.hpp"
+#include "../manifest/manifest.hpp"
 
 namespace repo {
+
+static const milliseconds DEFAULT_INTEREST_LIFETIME(4000);
 
 DeleteHandle::DeleteHandle(Face& face, RepoStorage& storageHandle, KeyChain& keyChain,
                            Scheduler& scheduler,
                            Validator& validator,
                            ndn::Name const& clusterPrefix, int clusterSize)
   : BaseHandle(face, storageHandle, keyChain, scheduler)
+  , m_interestLifetime(DEFAULT_INTEREST_LIFETIME)
   , m_validator(validator)
   , m_clusterPrefix(clusterPrefix)
   , m_clusterSize(clusterSize)
@@ -72,9 +77,26 @@ DeleteHandle::onDeleteValidated(const Interest& interest, const Name& prefix)
     return;
   }
 
-  ProcessId processId = generateProcessId();
+  auto name = parameter.getName().toUri();
+  auto hash = Manifest::getHash(name);
 
-  processDeleteCommand(interest, parameter);
+  ProcessId processId = generateProcessId();
+  ProcessInfo& process = m_processes[processId];
+  process.interest = interest;
+
+  RepoCommandParameter parameters;
+  parameters.setName(hash);
+  parameters.setProcessId(processId);
+
+  auto repo = Manifest::getManifestStorage(m_clusterPrefix, name, m_clusterSize);
+  Interest deleteManifestInterest = util::generateCommandInterest(
+      repo, "deleteManifest", parameters, m_interestLifetime);
+
+  getFace().expressInterest(
+      deleteManifestInterest,
+      bind(&DeleteHandle::onDeleteManifestCommandResponse, this, _1, _2, processId),
+      bind(&DeleteHandle::onTimeout, this, _1, processId), // Nack
+      bind(&DeleteHandle::onTimeout, this, _1, processId));
 }
 
 void
@@ -89,10 +111,6 @@ DeleteHandle::onDeleteManifestValidated(const Interest& interest, const Name& pr
     negativeReply(interest, 403);
     return;
   }
-
-  ProcessId processId = generateProcessId();
-
-  processDeleteCommand(interest, parameter);
 }
 
 void
@@ -155,6 +173,21 @@ DeleteHandle::negativeReply(const Interest& interest, uint64_t statusCode)
   RepoCommandResponse response;
   response.setStatusCode(statusCode);
   reply(interest, response);
+}
+
+void
+DeleteHandle::onTimeout(const Interest& interest, ProcessId processId) {
+  auto prevInterest = m_processes[processId].interest;
+  negativeReply(prevInterest, 405);
+  m_processes.erase(processId);
+}
+
+void
+DeleteHandle::onDeleteManifestCommandResponse(const Interest& interest, const Data& data, ProcessId processId) {
+  std::cout << "Got response from deleteManifest" << std::endl;
+
+  auto process = m_processes[processId];
+  reply(process.interest, "OK");
 }
 
 void
