@@ -126,9 +126,30 @@ DeleteHandle::onDeleteDataValidated(const Interest& interest, const Name& prefix
     return;
   }
 
-  ProcessId processId = generateProcessId();
+  if (!parameter.hasStartBlockId() || !parameter.hasEndBlockId()) {
+    negativeReply(interest, 403);
+    return;
+  }
 
-  processDeleteCommand(interest, parameter);
+  SegmentNo startBlockId = parameter.getStartBlockId();
+  SegmentNo endBlockId = parameter.getEndBlockId();
+
+  if (startBlockId > endBlockId) {
+    negativeReply(interest, 403);
+    return;
+  }
+
+  Name dataName = parameter.getName();
+  uint64_t nDeletedDatas = 0;
+  for (SegmentNo i = startBlockId; i <= endBlockId; i++) {
+    Name name = dataName;
+    name.appendSegment(i);
+    if (getStorageHandle().deleteData(name)) {
+      nDeletedDatas += 1;
+    }
+  }
+
+  positiveReply(interest, parameter, 200, nDeletedDatas);
 }
 
 void
