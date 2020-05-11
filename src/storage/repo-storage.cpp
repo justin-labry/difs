@@ -92,8 +92,10 @@ RepoStorage::readManifest(const std::string& hash)
 ssize_t
 RepoStorage::deleteData(const Name& name)
 {
-  m_storage.erase(name);
-  return 1;
+  if (m_storage.erase(name)) {
+    return 1;
+  }
+  return -1;
 }
 
 ssize_t
