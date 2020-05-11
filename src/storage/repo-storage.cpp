@@ -92,27 +92,8 @@ RepoStorage::readManifest(const std::string& hash)
 ssize_t
 RepoStorage::deleteData(const Name& name)
 {
-  bool hasError = false;
-  std::pair<int64_t,ndn::Name> idName = m_index.find(name);
-  if (idName.first == 0)
-    return false;
-  int64_t count = 0;
-  while (idName.first != 0) {
-    bool resultDb = m_storage.erase(idName.second);
-    bool resultIndex = m_index.erase(idName.second); //full name
-    if (resultDb && resultIndex) {
-      afterDataDeletion(idName.second);
-      count++;
-    }
-    else {
-      hasError = true;
-    }
-    idName = m_index.find(name);
-  }
-  if (hasError)
-    return -1;
-  else
-    return count;
+  m_storage.erase(name);
+  return 1;
 }
 
 ssize_t

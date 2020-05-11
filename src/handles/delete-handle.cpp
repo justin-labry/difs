@@ -40,8 +40,6 @@ DeleteHandle::DeleteHandle(Face& face, RepoStorage& storageHandle, KeyChain& key
 void
 DeleteHandle::onDeleteInterest(const Name& prefix, const Interest& interest)
 {
-  std::cout << "Got delete interest: " << prefix << ", " << interest.getName() << std::endl;
-
   m_validator.validate(interest, bind(&DeleteHandle::onDeleteValidated, this, _1, prefix),
                                  bind(&DeleteHandle::onValidationFailed, this, _1, _2));
 }
@@ -49,8 +47,6 @@ DeleteHandle::onDeleteInterest(const Name& prefix, const Interest& interest)
 void
 DeleteHandle::onDeleteManifestInterest(const Name& prefix, const Interest& interest)
 {
-  std::cout << "Got deleteManifest interest: " << prefix << ", " << interest.getName() << std::endl;
-
   m_validator.validate(interest, bind(&DeleteHandle::onDeleteManifestValidated, this, _1, prefix),
                                  bind(&DeleteHandle::onValidationFailed, this, _1, _2));
 }
@@ -58,8 +54,6 @@ DeleteHandle::onDeleteManifestInterest(const Name& prefix, const Interest& inter
 void
 DeleteHandle::onDeleteDataInterest(const Name& prefix, const Interest& interest)
 {
-  std::cout << "Got deleteData interest: " << prefix << ", " << interest.getName() << std::endl;
-
   m_validator.validate(interest, bind(&DeleteHandle::onDeleteDataValidated, this, _1, prefix),
                                  bind(&DeleteHandle::onValidationFailed, this, _1, _2));
 }
@@ -111,6 +105,20 @@ DeleteHandle::onDeleteManifestValidated(const Interest& interest, const Name& pr
     negativeReply(interest, 403);
     return;
   }
+
+  auto hash = parameter.getName().toUri();
+  auto manifest = getStorageHandle().readManifest(hash);
+
+  auto repos = manifest.getRepos();
+
+  ProcessId processId = generateProcessId();
+  ProcessInfo& process = m_processes[processId];
+  process.interest = interest;
+  process.repos = repos;
+  process.name = manifest.getName();
+
+  deleteData(processId);
+
 }
 
 void
@@ -153,6 +161,31 @@ DeleteHandle::onDeleteDataValidated(const Interest& interest, const Name& prefix
 }
 
 void
+DeleteHandle::deleteData(const ProcessId processId) {
+  ProcessInfo& process = m_processes[processId];
+
+  Manifest::Repo repo = process.repos.front();
+  process.repos.pop_front();
+  RepoCommandParameter parameters;
+  // /repo/0/data/data/1/%00%00
+  auto name = ndn::Name(repo.name);
+  name.append("data");
+  name.append(process.name);
+  parameters.setName(name);
+  parameters.setStartBlockId(repo.start);
+  parameters.setEndBlockId(repo.end);
+
+  Interest deleteDataInterest = util::generateCommandInterest(
+      ndn::Name(repo.name), "deleteData", parameters, m_interestLifetime);
+
+  getFace().expressInterest(
+      deleteDataInterest,
+      bind(&DeleteHandle::onDeleteDataCommandResponse, this, _1, _2, processId),
+      bind(&DeleteHandle::onTimeout, this, _1, processId), // Nack
+      bind(&DeleteHandle::onTimeout, this, _1, processId));
+}
+
+void
 DeleteHandle::onValidationFailed(const Interest& interest, const ValidationError& error)
 {
   std::cerr << error << std::endl;
@@ -162,10 +195,8 @@ DeleteHandle::onValidationFailed(const Interest& interest, const ValidationError
 void
 DeleteHandle::listen(const Name& prefix)
 {
-  std::cout << "Delete handler listening " << m_clusterPrefix << std::endl;
   getFace().setInterestFilter(Name(m_clusterPrefix).append("delete"),
                               bind(&DeleteHandle::onDeleteInterest, this, _1, _2));
-  std::cout << "Delete handler listening " << prefix << std::endl;
   getFace().setInterestFilter(Name(prefix).append("deleteManifest"),
                               bind(&DeleteHandle::onDeleteManifestInterest, this, _1, _2));
   getFace().setInterestFilter(Name(prefix).append("deleteData"),
@@ -199,32 +230,30 @@ DeleteHandle::negativeReply(const Interest& interest, uint64_t statusCode)
 void
 DeleteHandle::onTimeout(const Interest& interest, ProcessId processId) {
   auto prevInterest = m_processes[processId].interest;
-  negativeReply(prevInterest, 405);
+  negativeReply(prevInterest, 405); // Deletion failed
   m_processes.erase(processId);
 }
 
 void
 DeleteHandle::onDeleteManifestCommandResponse(const Interest& interest, const Data& data, ProcessId processId) {
-  std::cout << "Got response from deleteManifest" << std::endl;
-
   auto process = m_processes[processId];
   reply(process.interest, "OK");
+  m_processes.erase(processId);
 }
 
 void
-DeleteHandle::processDeleteCommand(const Interest& interest,
-                                         RepoCommandParameter& parameter)
-{
-  positiveReply(interest, parameter, 200, 0/*nDeletedDatas*/);
-  return;
+DeleteHandle::onDeleteDataCommandResponse(const Interest& interest, const Data& data, ProcessId processId) {
+  auto process = m_processes[processId];
 
-  int64_t nDeletedDatas = getStorageHandle().deleteData(parameter.getName());
-  if (nDeletedDatas == -1) {
-    std::cerr << "Deletion Failed!" <<std::endl;
-    negativeReply(interest, 405); //405 means deletion fail
+  auto repos = process.repos;
+
+  if (repos.size() == 0) {
+    reply(process.interest, "OK");
+    // TODO: getStorageHandle().deleteManifest();
+    m_processes.erase(processId);
+  } else {
+    deleteData(processId);
   }
-  else
-    positiveReply(interest, parameter, 200, nDeletedDatas);
 }
 
 } // namespace repo

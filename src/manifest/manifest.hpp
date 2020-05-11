@@ -7,6 +7,8 @@ namespace repo {
 
 class Manifest
 {
+
+public:
   struct Repo
   {
     std::string name;

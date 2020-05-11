@@ -107,6 +107,11 @@ FsStorage::readManifest(const std::string hash)
   boost::filesystem::path fsPath = m_path / DIRNAME_MANIFEST / hash;
   boost::filesystem::ifstream inFileData(fsPath);
 
+  //FIXME: check exists
+  if (!inFileData.is_open()) {
+    BOOST_THROW_EXCEPTION(Error("Directory '" + fsPath.string() + "' does not exists and cannot be created"));
+  }
+
   std::string json(
       (std::istreambuf_iterator<char>(inFileData)),
       std::istreambuf_iterator<char>());
@@ -118,6 +123,7 @@ int64_t
 FsStorage::writeData(const Data& data, const char* dataType)
 {
   auto name = data.getName();
+  std::cout << "Saving... " << name.toUri() << std::endl;
   auto id = hash(name.toUri());
 
   Index::Entry entry(data, 0);
@@ -139,8 +145,8 @@ FsStorage::erase(const Name& name)
   auto fsPath = getPath(name, DIRNAME_DATA);
 
   boost::filesystem::file_status fsPathStatus = boost::filesystem::status(fsPath);
-  if (!boost::filesystem::is_directory(fsPathStatus)) {
-    std::cerr << name.toUri() << " is not exists" << std::endl;
+  if (!boost::filesystem::exists(fsPathStatus)) {
+    std::cerr << name.toUri() << " is not exists (" << fsPath << ")" << std::endl;
     return false;
   }
 

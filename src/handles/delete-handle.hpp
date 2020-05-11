@@ -51,6 +51,9 @@ private:
   {
     Interest interest; // requested from ndngetfile. Save it for later reply
 
+    ndn::Name name;
+    std::list<Manifest::Repo> repos;
+
     /**
      * @brief the latest time point at which EndBlockId must be determined
      *
@@ -82,6 +85,9 @@ private:
   onDeleteDataValidated(const Interest& interest, const Name& prefix);
 
   void
+  deleteData(const ProcessId processId);
+
+  void
   onValidationFailed(const Interest& interest, const ValidationError& error);
 
   /**
@@ -101,10 +107,10 @@ private:
   onDeleteManifestCommandResponse(const Interest& interest, const Data& data, ProcessId processId);
 
   void
-  onTimeout(const Interest& interest, ProcessId processId);
+  onDeleteDataCommandResponse(const Interest& interest, const Data& data, ProcessId processId);
 
   void
-  processDeleteCommand(const Interest& interest, RepoCommandParameter& parameter);
+  onTimeout(const Interest& interest, ProcessId processId);
 
 private:
   Validator& m_validator;
