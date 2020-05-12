@@ -107,16 +107,22 @@ DeleteHandle::onDeleteManifestValidated(const Interest& interest, const Name& pr
   }
 
   auto hash = parameter.getName().toUri();
-  auto manifest = getStorageHandle().readManifest(hash);
-
-  auto repos = manifest.getRepos();
-
   ProcessId processId = generateProcessId();
-  ProcessInfo& process = m_processes[processId];
-  process.interest = interest;
-  process.repos = repos;
-  process.name = manifest.getName();
-  process.hash = manifest.getHash();
+  try {
+    auto manifest = getStorageHandle().readManifest(hash);
+    auto repos = manifest.getRepos();
+    ProcessInfo& process = m_processes[processId];
+    process.interest = interest;
+    process.repos = repos;
+    process.name = manifest.getName();
+    process.hash = manifest.getHash();
+  } catch (Storage::NotFoundError) {
+    std::cout << "Manifest " << hash << " Not found" << std::endl;
+    negativeReply(interest, 405);
+    return;
+  }
+
+
 
   deleteData(processId);
 

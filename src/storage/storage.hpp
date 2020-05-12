@@ -43,6 +43,16 @@ public:
     }
   };
 
+  class NotFoundError : public std::runtime_error
+  {
+  public:
+    explicit
+    NotFoundError(const std::string& what)
+      : std::runtime_error(what)
+    {
+    }
+  };
+
 public:
   class ItemMeta
   {

@@ -109,7 +109,7 @@ FsStorage::readManifest(const std::string& hash)
 
   //FIXME: check exists
   if (!inFileData.is_open()) {
-    BOOST_THROW_EXCEPTION(Error("Directory '" + fsPath.string() + "' does not exists and cannot be created"));
+    throw NotFoundError("File '" + fsPath.string() + "' does not exists");
   }
 
   std::string json(
