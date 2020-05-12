@@ -102,7 +102,7 @@ FsStorage::insertManifest(const Manifest& manifest)
 }
 
 Manifest
-FsStorage::readManifest(const std::string hash)
+FsStorage::readManifest(const std::string& hash)
 {
   boost::filesystem::path fsPath = m_path / DIRNAME_MANIFEST / hash;
   boost::filesystem::ifstream inFileData(fsPath);
@@ -117,6 +117,21 @@ FsStorage::readManifest(const std::string hash)
       std::istreambuf_iterator<char>());
 
   return Manifest::fromJson(json);
+}
+
+bool
+FsStorage::eraseManifest(const std::string& hash)
+{
+  boost::filesystem::path fsPath = m_path / DIRNAME_MANIFEST / hash;
+
+  boost::filesystem::file_status fsPathStatus = boost::filesystem::status(fsPath);
+  if (!boost::filesystem::exists(fsPathStatus)) {
+    std::cerr << hash << " is not exists (" << fsPath << ")" << std::endl;
+    return false;
+  }
+
+  boost::filesystem::remove_all(fsPath);
+  return true;
 }
 
 int64_t

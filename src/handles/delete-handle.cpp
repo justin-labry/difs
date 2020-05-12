@@ -116,6 +116,7 @@ DeleteHandle::onDeleteManifestValidated(const Interest& interest, const Name& pr
   process.interest = interest;
   process.repos = repos;
   process.name = manifest.getName();
+  process.hash = manifest.getHash();
 
   deleteData(processId);
 
@@ -249,7 +250,7 @@ DeleteHandle::onDeleteDataCommandResponse(const Interest& interest, const Data& 
 
   if (repos.size() == 0) {
     reply(process.interest, "OK");
-    // TODO: getStorageHandle().deleteManifest();
+    getStorageHandle().deleteManifest(process.hash);
     m_processes.erase(processId);
   } else {
     deleteData(processId);

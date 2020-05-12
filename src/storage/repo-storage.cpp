@@ -89,6 +89,12 @@ RepoStorage::readManifest(const std::string& hash)
   return manifest;
 }
 
+bool
+RepoStorage::deleteManifest(const std::string& hash)
+{
+  return m_storage.eraseManifest(hash);
+}
+
 ssize_t
 RepoStorage::deleteData(const Name& name)
 {

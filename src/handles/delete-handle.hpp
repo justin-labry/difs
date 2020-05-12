@@ -53,6 +53,7 @@ private:
 
     ndn::Name name;
     std::list<Manifest::Repo> repos;
+    std::string hash;
 
     /**
      * @brief the latest time point at which EndBlockId must be determined

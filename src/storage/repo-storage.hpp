@@ -77,6 +77,9 @@ public:
   Manifest
   readManifest(const std::string& hash);
 
+  bool
+  deleteManifest(const std::string& hash);
+
   /**
    *  @brief   delete data from repo
    *  @param   name     used to find entry needed to be erased in repo
