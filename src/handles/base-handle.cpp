@@ -19,6 +19,7 @@
 
 #include "base-handle.hpp"
 
+#include <ndn-cxx/security/signing-helpers.hpp>
 #include <ndn-cxx/util/random.hpp>
 
 namespace repo {
@@ -34,7 +35,7 @@ BaseHandle::sign(const Interest& interest, const std::string& data)
 {
   Data rdata(interest.getName());
   rdata.setContent((uint8_t*)(data.data()), data.size());
-  m_keyChain.sign(rdata);
+  m_keyChain.sign(rdata, ndn::signingWithSha256());
   return rdata;
 }
 
@@ -43,7 +44,7 @@ BaseHandle::sign(const Name& name, const Data& data)
 {
   Data rdata(data);
   rdata.setName(name);
-  m_keyChain.sign(rdata);
+  m_keyChain.sign(rdata, ndn::signingWithSha256());
   return rdata;
 }
 
