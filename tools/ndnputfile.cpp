@@ -194,34 +194,34 @@ NdnPutFile::prepareHashes()
     buf = std::cout.rdbuf();
     std::ostream os(buf);
 
-    std::cout << "Content: ";
+    //std::cout << "Content: ";
     os.write(reinterpret_cast<const char *>(buffer), blockSize);
-    std::cout << std::endl;
+    //std::cout << std::endl;
 
     std::ios_base::fmtflags g(std::cout.flags());
-    std::cout << "Content(hex): " << std::hex;
+    //std::cout << "Content(hex): " << std::hex;
     for (int i = 0; i < (int)blockSize; i += 1) {
-      printf("%02x", buffer[i]);
+      //printf("%02x", buffer[i]);
     }
-    std::cout.flags(g);
-    std::cout << std::endl;
+    //std::cout.flags(g);
+    //std::cout << std::endl;
 
     hash = util::calcHash(buffer, blockSize);
 
-    std::cout << (buffer+util::HASH_SIZE) << std::endl;
+    //std::cout << (buffer+util::HASH_SIZE) << std::endl;
 
-    std::cout << "Hash: " << std::hex;
+    //std::cout << "Hash: " << std::hex;
     for (const auto& s : hash) {
-      printf("%02x", s);
+      //printf("%02x", s);
     }
-    std::cout << std::endl;
+    //std::cout << std::endl;
     hashes.push_front(hash);
   }
 
   // save first block size
   // If position >= m_bytes, only one block is generated and no hash chain
   m_firstSize = m_bytes - (position - dataSize);
-  std::cout << "first data size = " << m_firstSize << std::endl;
+  //std::cout << "first data size = " << m_firstSize << std::endl;
   insertStream->seekg(0, std::ios::beg);
 }
 
@@ -249,8 +249,8 @@ NdnPutFile::prepareNextData(uint64_t referenceSegmentNo)
   for (size_t i = 0; i < nDataToPrepare && !m_isFinished; ++i) {
     auto segNo = referenceSegmentNo + i;
 
-    std::cout << "segno: " << segNo << std::endl;
-    std::cout << "hashes size: " << hashes.size() << std::endl;
+    //std::cout << "segno: " << segNo << std::endl;
+    //std::cout << "hashes size: " << hashes.size() << std::endl;
 
     uint8_t *buffer = new uint8_t[blockSize];
     std::array<uint8_t,util::HASH_SIZE> hash;
